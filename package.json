@@ -1,0 +1,39 @@
+{
+  "name": "iwfsa-platform-v2",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Governance-grade scaffold for the IWFSA Platform V2 rebuild",
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0",
+    "npm": ">=10.0.0"
+  },
+  "workspaces": [
+    "apps/common",
+    "apps/api",
+    "apps/web"
+  ],
+  "scripts": {
+    "dev:api": "node --experimental-strip-types apps/api/src/index.ts",
+    "dev:web": "node --experimental-strip-types apps/web/src/index.ts",
+    "check": "node scripts/check.mjs",
+    "test": "node --experimental-strip-types scripts/run-tests.mjs",
+    "typecheck": "node scripts/typecheck.mjs",
+    "dependency:scan": "node scripts/dependency-scan.mjs",
+    "workspace:ls": "node scripts/workspace-ls.mjs",
+    "docs:check": "node scripts/docs-control-check.mjs",
+    "ux:check": "node scripts/ux-brand-check.mjs",
+    "phase3:check": "node scripts/phase3-design-check.mjs",
+    "phase4:check": "node scripts/phase4-spine-check.mjs",
+    "phase5:check": "node scripts/phase5-membership-check.mjs",
+    "phase6:check": "node scripts/phase6-events-check.mjs",
+    "phase7:check": "node scripts/phase7-standing-check.mjs",
+    "supply-chain:check": "node scripts/supply-chain-check.mjs",
+    "sbom": "node scripts/generate-sbom.mjs",
+    "ci": "node scripts/ci.mjs",
+    "workspaces:link": "node scripts/link-workspaces.mjs"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0"
+  }
+}

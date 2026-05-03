@@ -1,0 +1,42 @@
+# Platform Memory
+
+## Phase 2 Cross-Cutting Constraints
+
+These constraints are active platform memory and apply to every future phase.
+
+- Every page has one primary task and at most one `data-primary-action`.
+- Navigation is surface-scoped. Public navigation must not expose member/admin routes; member navigation must not expose admin routes.
+- UI color, typography, motion, and spacing decisions flow from `apps/common/src/design-tokens.ts`.
+- Inline styles and hard-coded UI colors outside design tokens are not allowed.
+- V1 visual assets are available only through `/legacy-assets/{filename}` and must be backed by files in `apps/web/public/legacy-assets`.
+- Seed member data is illustrative only and must not include private contact details or raw PII.
+- Joyful UX is expressed through calm copy, progressive disclosure, clear next actions, motion tokens, and encouraging completion states.
+- Each new privileged action must be policy-checked, CSRF-protected when state-changing, and audited with correlation ID.
+- Phase 3 adds semantic visibility tokens, governance component props, and P0 prototype flows as permanent pre-build controls.
+- Phase 4 locks PostgreSQL as production persistence, repository adapters as the only data access path, and append-only redacted audit events as the evidence spine.
+- Phase 5 operationalises member intake with non-mutating import preview, idempotent commit, activation outbox, hashed tokens, consent-gated visibility, and standing-denied audit evidence.
+- Phase 6 adds governed participation: event lifecycle state, capacity-safe RSVP, FIFO waitlist promotion, audience eligibility, short-lived document access, and event audit evidence.
+- Phase 7 adds membership years, fee ledger state, waiver rules, standing calculation, subject-session rotation, and review-standing RSVP waitlist behavior.
+- Phase 8 begins with public visibility locked at both policy and repository boundaries: standing `good`, public visibility, granted consent, and admin approval are all required before public render.
+- Member-facing publication hints must use dignified consent language and remain scoped to member profile routes only.
+- Phase tags must only be created from a clean CI-passing commit; generated build output, dependencies, environment files, logs, temp folders, IDE settings, and local reflection files stay out of Git.
+
+## Current Seed Strategy
+
+Seed data source: `seed/legacy-members.json`.
+
+Asset path: `apps/web/public/legacy-assets`.
+
+Real member import remains deferred to the import and consent phases.
+
+## Verification Memory
+
+CI currently checks:
+
+- strict TypeScript syntax/configuration,
+- API and web tests,
+- workspace graph,
+- documentation control markers,
+- UX/brand/seed asset rules,
+- dependency scan,
+- SBOM generation.

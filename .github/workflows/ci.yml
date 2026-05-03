@@ -1,0 +1,57 @@
+name: IWFSA Platform V2 CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  phase-1-foundation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Check
+        run: npm run check
+
+      - name: Test
+        run: npm test
+
+      - name: Type validation
+        run: npm run typecheck
+
+      - name: Workspace dependency graph
+        run: npm run workspace:ls
+
+      - name: Documentation controls
+        run: npm run docs:check
+
+      - name: UX and brand controls
+        run: npm run ux:check
+
+      - name: Phase 3 design controls
+        run: npm run phase3:check
+
+      - name: Phase 4 spine controls
+        run: npm run phase4:check
+
+      - name: Phase 5 membership controls
+        run: npm run phase5:check
+
+      - name: Dependency scan
+        run: npm run dependency:scan
+
+      - name: SBOM
+        run: npm run sbom
+
+      - name: Supply-chain check
+        run: npm run supply-chain:check

@@ -1,0 +1,27 @@
+{
+  "name": "@iwfsa/common",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./audit": "./src/audit.ts",
+    "./activation": "./src/activation.ts",
+    "./auth": "./src/auth.ts",
+    "./component-contracts": "./src/component-contracts.ts",
+    "./consent": "./src/consent.ts",
+    "./design-tokens": "./src/design-tokens.ts",
+    "./events": "./src/events.ts",
+    "./import-pipeline": "./src/import-pipeline.ts",
+    "./persistence": "./src/persistence.ts",
+    "./policy": "./src/policy.ts",
+    "./public-profile-repository": "./src/public-profile-repository.ts",
+    "./runtime": "./src/runtime.ts",
+    "./repositories": "./src/repositories.ts",
+    "./session-repository": "./src/session-repository.ts",
+    "./standing": "./src/standing.ts",
+    "./telemetry": "./src/telemetry.ts",
+    "./visibility": "./src/visibility.ts"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

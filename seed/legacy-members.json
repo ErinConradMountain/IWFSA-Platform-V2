@@ -1,0 +1,34 @@
+{
+  "source": "V1 visual seed assets",
+  "privacy": "No real contact details or private member records. Display names are seed-only placeholders derived from legacy asset filenames.",
+  "members": [
+    {
+      "seedId": "seed-ayanda",
+      "displayName": "Ayanda",
+      "publicImage": "/legacy-assets/member-portrait-ayanda.svg",
+      "visibility": "public",
+      "approved": true
+    },
+    {
+      "seedId": "seed-lerato",
+      "displayName": "Lerato",
+      "publicImage": "/legacy-assets/member-portrait-lerato.svg",
+      "visibility": "public",
+      "approved": true
+    },
+    {
+      "seedId": "seed-nomsa",
+      "displayName": "Nomsa",
+      "publicImage": "/legacy-assets/member-portrait-nomsa.svg",
+      "visibility": "public",
+      "approved": true
+    },
+    {
+      "seedId": "seed-zara",
+      "displayName": "Zara",
+      "publicImage": "/legacy-assets/member-portrait-zara.svg",
+      "visibility": "public",
+      "approved": true
+    }
+  ]
+}

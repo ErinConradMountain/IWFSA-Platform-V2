@@ -1,0 +1,15 @@
+drop table if exists audit_event;
+drop table if exists app_session;
+drop table if exists document_access;
+drop table if exists standing_history;
+drop table if exists fee_record;
+drop table if exists membership_year;
+drop table if exists rsvp_record;
+drop table if exists event;
+drop table if exists outbox_message;
+drop table if exists import_batch_row;
+drop table if exists import_batch;
+drop table if exists activation_token;
+drop table if exists membership_status;
+drop table if exists member_profile;
+drop table if exists member_account;

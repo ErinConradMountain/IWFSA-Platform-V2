@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2024",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@iwfsa/common/*": ["apps/common/src/*"]
+    }
+  },
+  "include": ["apps/**/*.ts", "scripts/**/*.mjs"]
+}

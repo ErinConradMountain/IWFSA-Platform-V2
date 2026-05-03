@@ -1,0 +1,15 @@
+node_modules/
+.env.*
+.env
+*.local
+*.log
+coverage/
+build/
+dist/
+temp/
+tmp/
+.DS_Store
+.idea/
+.vscode/
+D:/Codex Learning Loop/
+D:\Codex Learning Loop\
