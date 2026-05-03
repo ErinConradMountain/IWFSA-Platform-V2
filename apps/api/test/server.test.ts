@@ -8,6 +8,7 @@ import { evaluate, type PolicyInput } from "@iwfsa/common/policy";
 import { createInMemoryRepositories } from "@iwfsa/common/repositories";
 import { createInMemorySessionRepository } from "@iwfsa/common/session-repository";
 import { createEventRepositories } from "@iwfsa/common/events";
+import { createInMemoryNotificationPreferenceRepository } from "@iwfsa/common/notification-policy";
 import { createInMemoryPublicApprovalRepository } from "@iwfsa/common/public-approval-repository";
 import { createStandingRepositories, openMembershipYear } from "@iwfsa/common/standing";
 import { createAuditEventEmitter } from "@iwfsa/common/audit";
@@ -684,6 +685,49 @@ test("admin public profile approval requires good standing and emits publication
   const approvalEvent = events.find((event) => event.action === "profile.publication_approved" && event.correlationId === "corr-public-approved");
   assert.ok(approvalEvent);
   assert.equal(approvalEvent.redactedMetadata.reviewNotes, "Approved after email [REDACTED] was removed.");
+});
+
+test("member notification preferences are CSRF-protected, scoped annually, and audited", async () => {
+  const auditRepository = createInMemoryAuditRepository();
+  const notificationPreferenceRepository = createInMemoryNotificationPreferenceRepository();
+  const server = createApiServer(createTestApiConfig(), {
+    sessionRepository: createInMemorySessionRepository(),
+    auditRepository,
+    notificationPreferenceRepository
+  });
+
+  await withServer(server, async (baseUrl) => {
+    const login = await createSession(baseUrl, "member", "member-notifications");
+    const csrf = await getCsrf(baseUrl, login.sessionCookie);
+    const response = await fetch(`${baseUrl}/api/member/notification-preferences`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-csrf-token": csrf.csrfToken,
+        cookie: csrf.cookie
+      },
+      body: JSON.stringify({
+        consentScopeYear: 2026,
+        preferences: {
+          birthday: { email: true, sms: false },
+          standing_change: { in_app: true },
+          celebration: { email: true, phone: "should-not-persist" }
+        }
+      })
+    });
+    const body = (await response.json()) as Record<string, unknown>;
+
+    assert.equal(response.status, 202);
+    assert.equal(body.consentScopeYear, 2026);
+    assert.deepEqual(body.eventTypes, ["birthday", "standing_change", "celebration"]);
+  });
+
+  const saved = notificationPreferenceRepository.findByMemberId("member-notifications");
+  assert.equal(saved?.preferences.birthday?.email, true);
+  assert.equal(saved?.preferences.birthday?.sms, false);
+  assert.equal((saved?.preferences.celebration as Record<string, unknown>).phone, undefined);
+  assert.ok(auditRepository.list().some((event) => event.action === "notification.preferences_updated"));
+  assert.equal(JSON.stringify(auditRepository.list()).includes("should-not-persist"), false);
 });
 
 test("admin public queue lists pending reviews and revokes approved profiles with audit", async () => {

@@ -40,6 +40,8 @@
 | Public cache isolation | Public profile endpoint emits public cache headers, ignores auth/session inputs, strips cookies, and returns public-safe fields only. | `P8-CACHE-001` |
 | Public SSR isolation | Public gallery and story pages render only approved public projection fields and no hidden private state in DOM, meta tags, or structured data. | `P8-SSR-001` |
 | Dual approval stewardship | Honorary and memorial content requires first admin approval plus chief admin final approval before publication audit events emit. | `P8-DUAL-APPROVAL-001` |
+| Consent-aware notifications | Celebrations require current-year consent, non-private visibility, good standing, and explicit channel opt-in before enqueue. | `P9-NOTIFICATION-POLICY-001` |
+| Outbox delivery boundary | Notification delivery uses deterministic outbox IDs, retry scheduling, cancellation, and redacted audit events. | `P9-OUTBOX-001` |
 
 ## Phase 1 Residual Risks
 

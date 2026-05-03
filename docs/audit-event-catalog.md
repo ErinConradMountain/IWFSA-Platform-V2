@@ -40,6 +40,10 @@ Audit events provide operational evidence for identity, consent, import, standin
 | `profile.publication_revoked` | Member or admin revokes public publication | `member_profile` | Resets effective public visibility to private/hidden and requires audit correlation plus persisted revocation timestamp. |
 | `profile.honorary_published` | Chief admin completes final approval for an honorary entry | `member_profile` | Emitted only after first admin approval; metadata uses redacted notes and the final approver correlation ID. |
 | `profile.memorial_published` | Chief admin completes final approval for a memorial entry | `member_profile` | Emitted only after first admin approval; metadata must avoid family/contact/private biographical PII. |
+| `notification.preferences_updated` | Member updates notification channel/event preferences | `notification_preferences` | Metadata includes consent scope year and event type keys only. |
+| `notification.sent` | Worker receives provider accepted/sent result | `outbox_message` | Metadata includes event type, payload reference, and provider reference only. |
+| `notification.failed` | Worker delivery attempt fails and is scheduled for retry | `outbox_message` | Metadata includes event type, payload reference, and attempt count. |
+| `notification.cancelled` | Pending message is cancelled after consent revocation or policy change | `outbox_message` | Metadata includes event type and payload reference only. |
 | `EVENT_STATE_CHANGED` | Admin publishes, closes, or archives event | `event` | Metadata includes previous and new state. |
 | `RSVP_REGISTERED` | Eligible member registers within capacity | `event` | No raw member PII in metadata. |
 | `WAITLIST_JOINED` | Eligible member joins full event waitlist | `event` | Metadata includes state only. |

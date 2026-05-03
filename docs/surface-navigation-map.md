@@ -33,6 +33,7 @@ This file is the source of truth for Phase 2 route generation, policy checks, ta
 | `/member/events` | `member.events.rsvp` | RSVP to events | `role=member/admin/chief_admin`, `surface=member`, `standing!=blocked` | `/member/standing` |
 | `/member/directory` | `member.directory.view` | View consent-scoped directory | `role=member/admin/chief_admin`, `surface=member`, `standing!=blocked`, `consent=granted` | `/member/consent-required` |
 | `/member/notifications` | `member.notifications.view` | View notifications | `role=member/admin/chief_admin`, `surface=member`, `standing!=blocked` | `/member/dashboard` |
+| `/api/member/notification-preferences` | `member.notifications.view` | Update annual notification channel preferences | `role=member/admin/chief_admin`, `surface=member`, `standing!=blocked`, CSRF token | `/member/dashboard` |
 
 ## Admin Surface
 

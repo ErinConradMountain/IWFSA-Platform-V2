@@ -175,3 +175,13 @@
 **Test References:** `P8-SSR-001`, `P8-DUAL-APPROVAL-001`.
 
 **Status:** Accepted.
+
+## 2026-05-03 - Phase 9 Outbox-First Notification Boundary
+
+**Decision:** Start Phase 9 with a consent-aware notification policy, deterministic outbox messages, retry/cancellation semantics, and a CSRF-protected member preference endpoint before wiring email, SMS, or in-app providers.
+
+**Rationale:** Notifications can easily erode consent if they are sent directly from feature handlers. The outbox boundary preserves idempotency, audit evidence, provider isolation, and graceful cancellation when consent changes.
+
+**Test References:** `P9-NOTIFICATION-POLICY-001`, `P9-OUTBOX-001`, `P9-PREFERENCES-001`.
+
+**Status:** Accepted.

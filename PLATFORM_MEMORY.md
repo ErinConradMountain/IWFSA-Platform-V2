@@ -28,6 +28,13 @@ These constraints are active platform memory and apply to every future phase.
 - Current Phase 8 public delivery adds durable `public_approval_record` persistence, public cache-isolated `GET /api/public/profiles`, provenance CI checks, and 55+ expected tests once merged.
 - Audit event schema confirmed for `profile.publication_requested`, `profile.publication_reviewed`, `profile.publication_approved`, and `profile.publication_revoked`.
 - Phase 8 sign-off slice adds admin queue/revoke/final-approve lifecycle endpoints, public gallery/story SSR projection, robots isolation, and dual approval for honorary/memorial publication with `profile.honorary_published` and `profile.memorial_published`.
+- Phase 8 closed at commit `cc882eb` with tag `phase8-complete`, 65/65 tests, and clean CI/SBOM/supply-chain/provenance evidence.
+
+## Phase 9: Notifications & Celebrations
+
+- Phase 9 starts with outbox-first delivery: no feature handler should call email, SMS, or in-app providers directly.
+- Celebratory notifications require granted, current-year consent, non-private visibility, good standing, and explicit channel opt-in.
+- Notification worker evidence uses `notification.sent`, `notification.failed`, and `notification.cancelled`; member preference updates use `notification.preferences_updated`.
 
 ## Current Seed Strategy
 

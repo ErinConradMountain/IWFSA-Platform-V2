@@ -123,15 +123,29 @@ Invariant: preview rows do not mutate `member_account` or `member_profile`.
 
 ### `outbox_message`
 
-Stores async follow-up work from committed imports.
+Stores async follow-up work from committed imports and notification delivery jobs.
 
 - `id`: deterministic message ID.
-- `event_type`: currently `activation_invite`.
+- `event_type`: activation, birthday, RSVP, standing, celebration, or operational notification type.
 - `payload_ref`: redacted or non-sensitive reference.
-- `state`: `pending`, `sent`, or `failed`.
+- `state`: `pending`, `sent`, `failed`, or `cancelled`.
+- `attempts`: delivery attempt count.
+- `next_retry_at`: next eligible delivery attempt timestamp.
+- `correlation_id`: source request or job correlation.
 - `created_at`: enqueue timestamp.
 
-Invariant: import commit does not block on delivery.
+Invariant: source handlers do not block on provider delivery; duplicate deterministic IDs do not create duplicate delivery.
+
+### `notification_preferences`
+
+Stores member notification consent and channel settings.
+
+- `member_id`: member account identifier.
+- `consent_scope_year`: year for which preferences are valid.
+- `preferences_json`: event-type/channel map with booleans only.
+- `updated_at`: evidence timestamp.
+
+Invariant: celebratory notifications require current-year consent, explicit opt-in, non-private visibility, and eligible standing.
 
 ### `event`
 
@@ -225,3 +239,8 @@ Invariant: review notes are sanitized before persistence; pending requests canno
 - Public approval: `pending_review -> approved -> published`; `approved|published -> revoked`.
 - Honorary/memorial approval: `pending_review -> approved -> published` requires first admin approval and final chief admin approval.
 - Public profile delivery: public reads use repository-level standing, visibility, consent, and approval predicates plus public-safe projection.
+
+## Phase 9 State Transitions
+
+- Notification outbox: `pending -> sent`; failed delivery remains `pending` with incremented attempts and future `next_retry_at`; consent revocation changes pending messages to `cancelled`.
+- Notification preferences: current-year member preference updates replace the event/channel map and emit `notification.preferences_updated`.

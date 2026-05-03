@@ -13,6 +13,7 @@ import {
   type EventStatus
 } from "@iwfsa/common/events";
 import { commitImport, previewImport } from "@iwfsa/common/import-pipeline";
+import { createInMemoryNotificationPreferenceRepository, sanitizeNotificationPreferences, type NotificationPreferenceRepository } from "@iwfsa/common/notification-policy";
 import type { PlatformRepositoryAdapter } from "@iwfsa/common/persistence";
 import { evaluate, type Surface, type TaskId } from "@iwfsa/common/policy";
 import type { PlatformRepositories } from "@iwfsa/common/repositories";
@@ -54,6 +55,7 @@ type ApiDependencies = {
   repositories?: PlatformRepositories;
   publicApprovalRepository?: PublicApprovalRepository;
   publicProfileRepository?: PublicProfileRepository;
+  notificationPreferenceRepository?: NotificationPreferenceRepository;
   eventRepositories?: EventRepositories;
   standingRepositories?: StandingRepositories;
   logSink?: LogSink;
@@ -223,6 +225,7 @@ export function createApiServer(config: ServiceConfig, dependencies: ApiDependen
   const eventRepositories = dependencies.eventRepositories || createEventRepositories();
   const standingRepositories = dependencies.standingRepositories || createStandingRepositories();
   const publicApprovalRepository = dependencies.publicApprovalRepository || createInMemoryPublicApprovalRepository();
+  const notificationPreferenceRepository = dependencies.notificationPreferenceRepository || createInMemoryNotificationPreferenceRepository();
   const publicProfileRepository = dependencies.publicProfileRepository || createPublicProfileRepository({
     query() {
       return { rows: [] };
@@ -514,6 +517,49 @@ export function createApiServer(config: ServiceConfig, dependencies: ApiDependen
       sendJson(response, 202, {
         status: "accepted",
         message: "The request has been processed."
+      });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/member/notification-preferences") {
+      if (!applyPolicy(response, { ...authContext, surface: "member", task: "member.notifications.view" }, auditRepository, correlationId)) {
+        return;
+      }
+
+      let body: Record<string, unknown> = {};
+      try {
+        body = await readJsonBody(request);
+      } catch {
+        sendJson(response, 400, { status: "rejected", message: "The request could not be completed." });
+        return;
+      }
+
+      const currentYear = new Date().getUTCFullYear();
+      const consentScopeYear = typeof body.consentScopeYear === "number" && Number.isInteger(body.consentScopeYear) ? body.consentScopeYear : currentYear;
+      const preferences = sanitizeNotificationPreferences({
+        memberId: authContext.subject || "member",
+        consentScopeYear,
+        preferences: body.preferences,
+        updatedAt: new Date().toISOString()
+      });
+      notificationPreferenceRepository.save(preferences);
+      emitAudit(
+        auditRepository,
+        "notification.preferences_updated",
+        correlationId,
+        {
+          consentScopeYear: preferences.consentScopeYear,
+          eventTypes: Object.keys(preferences.preferences)
+        },
+        authContext.subject || "member",
+        "notification_preferences",
+        "opaque"
+      );
+      sendJson(response, 202, {
+        status: "accepted",
+        correlationId,
+        consentScopeYear: preferences.consentScopeYear,
+        eventTypes: Object.keys(preferences.preferences)
       });
       return;
     }

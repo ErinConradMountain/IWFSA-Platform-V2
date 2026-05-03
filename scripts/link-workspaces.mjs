@@ -6,7 +6,7 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const scopeDirectory = resolve(root, "node_modules", "@iwfsa");
 const commonLink = resolve(scopeDirectory, "common");
 const commonSource = "../../../../apps/common/src";
-const modules = ["activation", "audit", "auth", "component-contracts", "consent", "design-tokens", "events", "import-pipeline", "persistence", "policy", "public-approval", "public-approval-repository", "public-profile-repository", "repositories", "runtime", "session-repository", "standing", "telemetry", "visibility"];
+const modules = ["activation", "audit", "auth", "component-contracts", "consent", "design-tokens", "events", "import-pipeline", "notification-policy", "outbox", "persistence", "policy", "public-approval", "public-approval-repository", "public-profile-repository", "repositories", "runtime", "session-repository", "standing", "telemetry", "visibility"];
 
 mkdirSync(resolve(commonLink, "src"), { recursive: true });
 

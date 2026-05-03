@@ -74,6 +74,9 @@ Phase 2 adds these required test IDs:
 | `P8-PROVENANCE-001` | CI provenance check verifies clean tracked tree, tag resolution when present, and SBOM component alignment. |
 | `P8-SSR-001` | Public gallery/story SSR renders only approved projection fields and never embeds private state in DOM or metadata. |
 | `P8-DUAL-APPROVAL-001` | Honorary/memorial publication requires admin first approval and chief admin final approval with one publish audit event. |
+| `P9-NOTIFICATION-POLICY-001` | Notification policy blocks celebration delivery without current-year consent, non-private visibility, good standing, and opt-in. |
+| `P9-OUTBOX-001` | Notification outbox enqueue is idempotent, failed delivery schedules retry, and consent revocation cancels pending items. |
+| `P9-PREFERENCES-001` | Member notification preferences are CSRF-protected, annual-scope persisted, sanitized, and audited. |
 
 ## Layers
 
