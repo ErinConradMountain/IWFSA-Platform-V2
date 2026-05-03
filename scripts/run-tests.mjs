@@ -8,6 +8,7 @@ const testFiles = [
   "../apps/common/test/visibility.test.ts",
   "../apps/common/test/public-profile-repository.test.ts",
   "../apps/common/test/public-approval.test.ts",
+  "../apps/common/test/public-approval-repository.test.ts",
   "../apps/api/test/server.test.ts",
   "../apps/web/test/server.test.ts"
 ];

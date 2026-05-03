@@ -40,6 +40,7 @@ test("publication state machine allows approval path and explicit revocation", (
   assert.equal(revoked.newState, "revoked");
   assert.equal(revoked.visibility, "hidden");
 
+  assert.throws(() => transitionPublicationState("pending_review", "revoke"), /invalid_publication_transition/);
   assert.throws(() => transitionPublicationState("published", "approve"), /invalid_publication_transition/);
 });
 
@@ -66,6 +67,7 @@ test("publication audit metadata redacts review notes and hashes metadata", () =
   assert.ok(event.metadataHash);
 });
 
-test("review note sanitizer redacts email and phone-like values", () => {
-  assert.equal(sanitizeReviewNotes("Contact a@b.co or +27 82 000 1111"), "Contact [REDACTED] or [REDACTED]");
+test("review note sanitizer strips markup, redacts email and phone-like values, and truncates", () => {
+  assert.equal(sanitizeReviewNotes("<b>Contact</b> a@b.co or +27 82 000 1111"), "Contact [REDACTED] or [REDACTED]");
+  assert.equal(sanitizeReviewNotes("x".repeat(700)).length, 500);
 });

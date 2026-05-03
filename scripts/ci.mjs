@@ -17,7 +17,8 @@ const steps = [
   ["node", ["scripts/phase7-standing-check.mjs"]],
   ["node", ["scripts/dependency-scan.mjs"]],
   ["node", ["scripts/generate-sbom.mjs"]],
-  ["node", ["scripts/supply-chain-check.mjs"]]
+  ["node", ["scripts/supply-chain-check.mjs"]],
+  ["node", ["scripts/provenance-check.mjs"]]
 ];
 
 for (const [command, args] of steps) {

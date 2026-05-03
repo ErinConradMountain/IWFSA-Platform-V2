@@ -22,6 +22,12 @@ These constraints are active platform memory and apply to every future phase.
 - Phase tags must only be created from a clean CI-passing commit; generated build output, dependencies, environment files, logs, temp folders, IDE settings, and local reflection files stay out of Git.
 - Public profile publication approval now has an audit-led state machine: `pending_review -> approved -> published`, with revocation resetting effective visibility to hidden/private.
 
+## Phase 8: Public Surface & Storytelling
+
+- Baseline commit `2d44fb8` carries `phase7-complete` and `phase8-kickoff-repository-enforcement`; approval spine commit `086fac1` added RBAC, standing re-validation, PII-redacted review notes, and publication audit events.
+- Current Phase 8 public delivery adds durable `public_approval_record` persistence, public cache-isolated `GET /api/public/profiles`, provenance CI checks, and 55+ expected tests once merged.
+- Audit event schema confirmed for `profile.publication_requested`, `profile.publication_reviewed`, `profile.publication_approved`, and `profile.publication_revoked`.
+
 ## Current Seed Strategy
 
 Seed data source: `seed/legacy-members.json`.

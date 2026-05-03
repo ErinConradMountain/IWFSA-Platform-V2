@@ -179,6 +179,23 @@ Append-only evidence stream.
 
 Invariant: audit events are insert-only; update/delete are blocked by migration rules.
 
+### `public_approval_record`
+
+Stores durable public profile publication review state.
+
+- `id`: opaque approval record identifier.
+- `profile_id`: profile under review.
+- `member_id`: member represented by the profile.
+- `profile_version`: immutable profile version reviewed by the curator.
+- `requested_at`: request timestamp.
+- `reviewed_by`: admin or chief admin actor that reviewed the request.
+- `status`: `pending_review`, `approved`, `published`, or `revoked`.
+- `review_notes_sanitized`: markup-stripped, length-limited, PII-redacted review note.
+- `approved_at`, `revoked_at`: lifecycle timestamps.
+- `correlation_id`: request/audit correlation.
+
+Invariant: review notes are sanitized before persistence; pending requests cannot be revoked without first creating accountable approval/review context.
+
 ## Phase 5 State Transitions
 
 - Import batch: `preview -> committed` or `preview -> failed`.
@@ -199,3 +216,8 @@ Invariant: audit events are insert-only; update/delete are blocked by migration 
 - Fee record: `pending -> partial -> paid`; `pending|partial -> waived`.
 - Standing: `good`, `review`, or `blocked` based on cycle, balance, grace period, and manual block.
 - Session propagation: standing change rotates subject sessions immediately.
+
+## Phase 8 State Transitions
+
+- Public approval: `pending_review -> approved -> published`; `approved|published -> revoked`.
+- Public profile delivery: public reads use repository-level standing, visibility, consent, and approval predicates plus public-safe projection.

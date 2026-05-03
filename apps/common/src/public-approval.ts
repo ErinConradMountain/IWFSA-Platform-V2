@@ -92,7 +92,7 @@ export function transitionPublicationState(currentState: PublicationState, actio
     };
   }
 
-  if (action === "revoke" && ["pending_review", "approved", "published"].includes(currentState)) {
+  if (action === "revoke" && ["approved", "published"].includes(currentState)) {
     return {
       previousState: currentState,
       newState: "revoked",
@@ -124,6 +124,9 @@ export function emitPublicationAudit(audit: AuditEventEmitter, input: Publicatio
 
 export function sanitizeReviewNotes(value: string): string {
   return value
+    .replace(/<[^>]*>/g, "")
     .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[REDACTED]")
-    .replace(/\+?\d[\d ().-]{7,}\d/g, "[REDACTED]");
+    .replace(/\+?\d[\d ().-]{7,}\d/g, "[REDACTED]")
+    .trim()
+    .slice(0, 500);
 }

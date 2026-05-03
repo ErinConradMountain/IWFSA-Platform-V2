@@ -147,3 +147,21 @@
 **Rationale:** The V2 checkout had only `README.md` tracked while the working platform scaffold was untracked. A clean baseline commit is required before phase tags can carry useful provenance.
 
 **Status:** Accepted.
+
+## 2026-05-03 - Phase 8 Durable Approval And Public Cache Delivery
+
+**Decision:** Persist public approval queue state in `public_approval_record`, sanitize review notes before storage, expose approved public profiles through a cache-isolated anonymous endpoint, and run a CI provenance check after SBOM generation.
+
+**Rationale:** Public storytelling needs restart-safe approval state and anonymous cache behavior before broader routing or CDN work. Provenance checks keep phase evidence tied to a clean tracked tree and SBOM output without requiring signed release tags before the Phase 10 release-candidate stage.
+
+**Test References:** `P8-APPROVAL-REPO-001`, `P8-CACHE-001`, `P8-PROVENANCE-001`.
+
+**Status:** Accepted.
+
+## 2026-05-03 - Lightweight Tags Until Phase 10 RC
+
+**Decision:** Retain lightweight phase tags for Phase 8 and Phase 9 delivery speed. Adopt annotated and signed release tags at Phase 10 RC, beginning with `v2.0-rc.1`, when release artifacts and rollback authority are finalized.
+
+**Rationale:** Current phase tags mark local governance checkpoints, while Phase 10 release candidates require stronger cryptographic provenance for cutover rehearsal and supply-chain review.
+
+**Status:** Accepted.

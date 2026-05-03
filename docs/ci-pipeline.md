@@ -19,6 +19,7 @@
 - dependency scan
 - CycloneDX SBOM generation
 - supply-chain check
+- provenance check
 - build artifact packaging
 
 ### RC
@@ -51,6 +52,12 @@ Phase tags for the current governance line:
 
 - `phase7-complete`: membership standing and fee governance baseline.
 - `phase8-kickoff-repository-enforcement`: public visibility, repository query enforcement, and member publication clarity baseline.
+
+CI now runs `scripts/provenance-check.mjs` after SBOM and supply-chain validation. Normal branch CI allows untagged HEADs but checks a clean tracked tree when Git execution is available, `git describe`, tag resolution when tags are present, and SBOM component alignment. In restricted local runtimes where Node cannot spawn Git, the script falls back to `.git` reference files for HEAD and tag resolution. Release jobs can set `REQUIRE_TAGGED_HEAD=1` to require the passing commit to be tagged.
+
+## Public Cache Regression Tests
+
+Public delivery changes must verify `Cache-Control`, `Vary`, `X-Surface`, absence of `Set-Cookie`, and public-safe response schema. Authenticated requests to public endpoints must not change cache behavior or leak session data.
 
 ## Current Local Constraint
 

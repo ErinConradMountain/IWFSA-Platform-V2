@@ -17,6 +17,8 @@ import type { PlatformRepositoryAdapter } from "@iwfsa/common/persistence";
 import { evaluate, type Surface, type TaskId } from "@iwfsa/common/policy";
 import type { PlatformRepositories } from "@iwfsa/common/repositories";
 import { emitPublicationAudit, evaluatePublicApprovalPolicy, transitionPublicationState, type PublicationState } from "@iwfsa/common/public-approval";
+import { createInMemoryPublicApprovalRepository, type PublicApprovalRepository } from "@iwfsa/common/public-approval-repository";
+import { createPublicProfileRepository, type PublicProfileRepository } from "@iwfsa/common/public-profile-repository";
 import { buildHealthPayload, readRequestBody, sendJson, type ServiceConfig } from "@iwfsa/common/runtime";
 import type { ConsentState, Session, SessionRepository, SessionRotationReason, Standing } from "@iwfsa/common/session-repository";
 import {
@@ -36,6 +38,7 @@ import {
   getCorrelationId,
   type LogSink
 } from "@iwfsa/common/telemetry";
+import { publicCacheHeaders, publicRequestCacheKey } from "./middleware/public-cache.ts";
 
 const traceIndex = {
   identity: ["TRC-001", "TRC-002"],
@@ -49,6 +52,8 @@ type ApiDependencies = {
   persistenceAdapter?: PlatformRepositoryAdapter;
   auditRepository?: AuditRepository;
   repositories?: PlatformRepositories;
+  publicApprovalRepository?: PublicApprovalRepository;
+  publicProfileRepository?: PublicProfileRepository;
   eventRepositories?: EventRepositories;
   standingRepositories?: StandingRepositories;
   logSink?: LogSink;
@@ -196,6 +201,12 @@ export function createApiServer(config: ServiceConfig, dependencies: ApiDependen
   const { sessionRepository, persistenceAdapter, auditRepository, repositories, logSink } = dependencies;
   const eventRepositories = dependencies.eventRepositories || createEventRepositories();
   const standingRepositories = dependencies.standingRepositories || createStandingRepositories();
+  const publicApprovalRepository = dependencies.publicApprovalRepository || createInMemoryPublicApprovalRepository();
+  const publicProfileRepository = dependencies.publicProfileRepository || createPublicProfileRepository({
+    query() {
+      return { rows: [] };
+    }
+  });
 
   if (!eventRepositories.events.has("event-1")) {
     eventRepositories.events.set("event-1", {
@@ -237,6 +248,22 @@ export function createApiServer(config: ServiceConfig, dependencies: ApiDependen
           }
         })
       );
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/public/profiles") {
+      const limit = Math.min(50, Math.max(1, Number.parseInt(url.searchParams.get("limit") || "25", 10) || 25));
+      const profiles = publicProfileRepository.findApprovedPublicProfiles(limit).map((profile) => ({
+        displayName: profile.displayName,
+        biography: profile.biography,
+        updatedAt: profile.updatedAt
+      }));
+
+      sendJson(response, 200, {
+        surface: "public",
+        cacheKey: publicRequestCacheKey(request),
+        profiles
+      }, publicCacheHeaders());
       return;
     }
 
@@ -564,22 +591,51 @@ export function createApiServer(config: ServiceConfig, dependencies: ApiDependen
 
       try {
         const currentState = typeof body.currentState === "string" ? (body.currentState as PublicationState) : "pending_review";
+        const approvalId = typeof body.approvalId === "string" ? body.approvalId : `approval:${approvalMatch[1]}`;
+        publicApprovalRepository.createReviewRequest({
+          id: approvalId,
+          profileId: approvalMatch[1],
+          memberId: approvalMatch[1],
+          profileVersion: typeof body.profileVersion === "string" ? body.profileVersion : "profile-v1",
+          requestedAt: new Date().toISOString(),
+          correlationId
+        });
+        if (currentState !== "pending_review") {
+          const existing = publicApprovalRepository.findById(approvalId);
+          if (existing?.status === "pending_review" && currentState === "approved") {
+            publicApprovalRepository.transitionApproval({
+              id: approvalId,
+              action: "approve",
+              actorId: authContext.subject || "admin",
+              correlationId,
+              now: new Date().toISOString()
+            });
+          }
+        }
+        const stored = publicApprovalRepository.transitionApproval({
+          id: approvalId,
+          action: "approve",
+          actorId: authContext.subject || "admin",
+          reviewNotes: typeof body.reviewNotes === "string" ? body.reviewNotes : "",
+          correlationId,
+          now: new Date().toISOString()
+        });
         const transition = transitionPublicationState(currentState, "approve");
         emitPublicationAudit(createAuditEventEmitter(auditRepository), {
           action: transition.auditAction,
           actorId: authContext.subject || "admin",
           memberId: approvalMatch[1],
-          profileVersion: typeof body.profileVersion === "string" ? body.profileVersion : "profile-v1",
+          profileVersion: stored.profileVersion,
           previousState: transition.previousState,
           newState: transition.newState,
-          reviewNotes: typeof body.reviewNotes === "string" ? body.reviewNotes : "",
+          reviewNotes: stored.reviewNotesSanitized,
           correlationId
         });
 
         sendJson(response, 202, {
           status: "accepted",
           correlationId,
-          publicationState: transition.newState,
+          publicationState: stored.status,
           visibility: transition.visibility
         });
       } catch {

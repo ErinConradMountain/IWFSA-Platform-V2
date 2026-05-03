@@ -69,6 +69,9 @@ Phase 2 adds these required test IDs:
 | `P8-PUBLIC-QUERY-001` | Public profile repository pushes standing, visibility, consent, and approval predicates into the data layer. |
 | `P8-MEMBER-HINT-001` | Member publication-gate hint renders only on member profile routes. |
 | `P8-APPROVAL-001` | Admin publication approval requires RBAC, member standing re-validation, valid state transition, and PII-redacted audit. |
+| `P8-APPROVAL-REPO-001` | Public approval repository persists queue state, sanitizes review notes before storage, and rejects invalid revocation. |
+| `P8-CACHE-001` | Public profile endpoint emits cache-isolation headers and returns public-safe schema only. |
+| `P8-PROVENANCE-001` | CI provenance check verifies clean tracked tree, tag resolution when present, and SBOM component alignment. |
 
 ## Layers
 

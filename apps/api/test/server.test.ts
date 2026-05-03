@@ -685,6 +685,47 @@ test("admin public profile approval requires good standing and emits publication
   assert.equal(approvalEvent.redactedMetadata.reviewNotes, "Approved after email [REDACTED] was removed.");
 });
 
+test("public profile endpoint applies cache isolation and public-safe projection", async () => {
+  const server = createApiServer(createTestApiConfig(), {
+    sessionRepository: createInMemorySessionRepository(),
+    publicProfileRepository: {
+      findApprovedPublicProfiles() {
+        return [
+          {
+            displayName: "Approved Member",
+            biography: "Public-safe biography.",
+            updatedAt: "2026-05-03T10:00:00.000Z",
+            internal_id: "must-not-leak",
+            consent: "granted"
+          } as never
+        ];
+      }
+    }
+  });
+
+  await withServer(server, async (baseUrl) => {
+    const member = await createSession(baseUrl, "member", "cache.member");
+    const response = await fetch(`${baseUrl}/api/public/profiles?limit=5`, {
+      headers: {
+        authorization: "Bearer private-token",
+        cookie: member.sessionCookie
+      }
+    });
+    const body = (await response.json()) as Record<string, any>;
+
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("cache-control"), "public, max-age=300, s-maxage=3600, stale-while-revalidate=60");
+    assert.equal(response.headers.get("vary"), "Accept-Encoding");
+    assert.equal(response.headers.get("x-surface"), "public");
+    assert.equal(response.headers.get("set-cookie"), null);
+    assert.deepEqual(Object.keys(body.profiles[0]).sort(), ["biography", "displayName", "updatedAt"].sort());
+    assert.equal(JSON.stringify(body).includes("private-token"), false);
+    assert.equal(JSON.stringify(body).includes("iwfsa_session"), false);
+    assert.equal(JSON.stringify(body).includes("internal_id"), false);
+    assert.equal(JSON.stringify(body).includes("consent"), false);
+  });
+});
+
 test("review standing member is waitlisted even when event capacity is available", async () => {
   const auditRepository = createInMemoryAuditRepository();
   const sessionRepository = createInMemorySessionRepository();

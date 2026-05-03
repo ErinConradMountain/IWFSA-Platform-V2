@@ -10,6 +10,7 @@ This file is the source of truth for Phase 2 route generation, policy checks, ta
 | --- | --- | --- | --- | --- |
 | `/` | `public.home` | View homepage | `surface=public` | `/` |
 | `/public-profiles` | `public.profiles.approved` | View approved public profiles | `surface=public`, `standing=good`, `visibility=public`, `consent=granted`, `approved=true` | `/404` |
+| `/api/public/profiles` | `public.profiles.approved` | Read approved public-safe profile projection | `surface=public`, `standing=good`, `visibility=public`, `consent=granted`, `approved=true`, cache headers | `/404` |
 | `/honoraries` | `public.honoraries` | View approved honorary entries | `surface=public`, `standing=good`, `visibility=public`, `consent=granted`, `approved=true` | `/404` |
 | `/memorials` | `public.memorials` | View approved memorial entries | `surface=public`, `standing=good`, `visibility=public`, `consent=granted`, `approved=true` | `/404` |
 | `/contact` | `public.contact` | View public contact information | `surface=public` | `/` |

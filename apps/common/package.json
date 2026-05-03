@@ -16,6 +16,7 @@
     "./policy": "./src/policy.ts",
     "./public-profile-repository": "./src/public-profile-repository.ts",
     "./public-approval": "./src/public-approval.ts",
+    "./public-approval-repository": "./src/public-approval-repository.ts",
     "./runtime": "./src/runtime.ts",
     "./repositories": "./src/repositories.ts",
     "./session-repository": "./src/session-repository.ts",
