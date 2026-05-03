@@ -617,6 +617,74 @@ test("admin fee payment updates standing and rotates member session before next 
   assert.ok(auditRepository.list().some((event) => event.action === "STANDING_CHANGED" && event.correlationId === "corr-api-fee"));
 });
 
+test("admin public profile approval requires good standing and emits publication audit", async () => {
+  const auditRepository = createInMemoryAuditRepository();
+  const server = createApiServer(createTestApiConfig(), {
+    sessionRepository: createInMemorySessionRepository(),
+    auditRepository
+  });
+
+  await withServer(server, async (baseUrl) => {
+    const member = await createSession(baseUrl, "member", "member-public-approval");
+    const memberCsrf = await getCsrf(baseUrl, member.sessionCookie);
+    const memberDenied = await fetch(`${baseUrl}/api/admin/public-profiles/member-public-approval/approve`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-csrf-token": memberCsrf.csrfToken,
+        cookie: member.sessionCookie,
+        "x-correlation-id": "corr-public-member-denied"
+      },
+      body: JSON.stringify({ memberStanding: "good" })
+    });
+    assert.equal(memberDenied.status, 403);
+
+    const admin = await createSession(baseUrl, "admin", "admin-public-approval");
+    const reviewCsrf = await getCsrf(baseUrl, admin.sessionCookie);
+    const reviewDenied = await fetch(`${baseUrl}/api/admin/public-profiles/member-public-approval/approve`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-csrf-token": reviewCsrf.csrfToken,
+        cookie: admin.sessionCookie,
+        "x-correlation-id": "corr-public-review-denied"
+      },
+      body: JSON.stringify({ memberStanding: "review" })
+    });
+    assert.equal(reviewDenied.status, 403);
+
+    const approveCsrf = await getCsrf(baseUrl, admin.sessionCookie);
+    const approved = await fetch(`${baseUrl}/api/admin/public-profiles/member-public-approval/approve`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-csrf-token": approveCsrf.csrfToken,
+        cookie: admin.sessionCookie,
+        "x-correlation-id": "corr-public-approved"
+      },
+      body: JSON.stringify({
+        memberStanding: "good",
+        currentState: "pending_review",
+        profileVersion: "profile-v1",
+        reviewNotes: "Approved after email person@example.test was removed."
+      })
+    });
+    const body = (await approved.json()) as Record<string, unknown>;
+
+    assert.equal(approved.status, 202);
+    assert.equal(body.correlationId, "corr-public-approved");
+    assert.equal(body.publicationState, "approved");
+    assert.equal(body.visibility, "hidden");
+  });
+
+  const events = auditRepository.list();
+  assert.ok(events.some((event) => event.action === "POLICY_DENY" && event.correlationId === "corr-public-member-denied"));
+  assert.ok(events.some((event) => event.action === "POLICY_DENY" && event.correlationId === "corr-public-review-denied" && event.redactedMetadata.reason === "MEMBER_GOOD_STANDING_REQUIRED"));
+  const approvalEvent = events.find((event) => event.action === "profile.publication_approved" && event.correlationId === "corr-public-approved");
+  assert.ok(approvalEvent);
+  assert.equal(approvalEvent.redactedMetadata.reviewNotes, "Approved after email [REDACTED] was removed.");
+});
+
 test("review standing member is waitlisted even when event capacity is available", async () => {
   const auditRepository = createInMemoryAuditRepository();
   const sessionRepository = createInMemorySessionRepository();

@@ -16,6 +16,7 @@ import { commitImport, previewImport } from "@iwfsa/common/import-pipeline";
 import type { PlatformRepositoryAdapter } from "@iwfsa/common/persistence";
 import { evaluate, type Surface, type TaskId } from "@iwfsa/common/policy";
 import type { PlatformRepositories } from "@iwfsa/common/repositories";
+import { emitPublicationAudit, evaluatePublicApprovalPolicy, transitionPublicationState, type PublicationState } from "@iwfsa/common/public-approval";
 import { buildHealthPayload, readRequestBody, sendJson, type ServiceConfig } from "@iwfsa/common/runtime";
 import type { ConsentState, Session, SessionRepository, SessionRotationReason, Standing } from "@iwfsa/common/session-repository";
 import {
@@ -523,6 +524,70 @@ export function createApiServer(config: ServiceConfig, dependencies: ApiDependen
         rowCount: result.rows.length,
         actions: result.rows.map((row) => row.action)
       });
+      return;
+    }
+
+    const approvalMatch = url.pathname.match(/^\/api\/admin\/public-profiles\/([^/]+)\/approve$/);
+    if (request.method === "POST" && approvalMatch) {
+      if (!applyPolicy(response, { ...authContext, surface: "admin", task: "admin.public-review.queue", auditTrail: true }, auditRepository, correlationId)) {
+        return;
+      }
+
+      let body: Record<string, unknown> = {};
+      try {
+        body = await readJsonBody(request);
+      } catch {
+        body = {};
+      }
+
+      const memberStanding = typeof body.memberStanding === "string" ? (body.memberStanding as Standing) : "blocked";
+      const approvalPolicy = evaluatePublicApprovalPolicy({
+        role: authContext.role,
+        surface: "admin",
+        memberStanding,
+        auditTrail: true
+      });
+
+      if (!approvalPolicy.allowed) {
+        emitAudit(auditRepository, "POLICY_DENY", correlationId, { reason: approvalPolicy.reason, surface: "admin", task: "admin.public-review.queue" });
+        sendJson(response, 403, {
+          status: "rejected",
+          message: "The request could not be completed."
+        });
+        return;
+      }
+
+      if (!auditRepository) {
+        sendJson(response, 500, { status: "rejected", message: "The request could not be completed." });
+        return;
+      }
+
+      try {
+        const currentState = typeof body.currentState === "string" ? (body.currentState as PublicationState) : "pending_review";
+        const transition = transitionPublicationState(currentState, "approve");
+        emitPublicationAudit(createAuditEventEmitter(auditRepository), {
+          action: transition.auditAction,
+          actorId: authContext.subject || "admin",
+          memberId: approvalMatch[1],
+          profileVersion: typeof body.profileVersion === "string" ? body.profileVersion : "profile-v1",
+          previousState: transition.previousState,
+          newState: transition.newState,
+          reviewNotes: typeof body.reviewNotes === "string" ? body.reviewNotes : "",
+          correlationId
+        });
+
+        sendJson(response, 202, {
+          status: "accepted",
+          correlationId,
+          publicationState: transition.newState,
+          visibility: transition.visibility
+        });
+      } catch {
+        sendJson(response, 409, {
+          status: "rejected",
+          message: "The request could not be completed."
+        });
+      }
       return;
     }
 

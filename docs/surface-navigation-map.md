@@ -43,6 +43,7 @@ This file is the source of truth for Phase 2 route generation, policy checks, ta
 | `/admin/standing` | `admin.standing.manage` | Manage standing | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
 | `/admin/public-review` | `admin.public-review.queue` | Review public profile queue | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
 | `/admin/public-review/approve` | `admin.public-review.queue` | Approve public render | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
+| `/api/admin/public-profiles/{id}/approve` | `admin.public-review.queue` | Approve public profile publication request | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on`, `member_standing=good` | `/` |
 | `/admin/audit` | `admin.audit.read` | Read audit logs | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
 | `/admin/support-notes` | `admin.support-notes.add` | Add support notes | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
 

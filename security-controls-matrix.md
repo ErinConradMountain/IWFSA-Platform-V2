@@ -35,6 +35,7 @@
 | Standing denial evidence | Blocked standing route access emits `STANDING_DENIED`. | `P5-STANDING-001` |
 | Public query pushdown | Approved public profile reads push standing, visibility, consent, and approval predicates into the repository query and project only public-safe fields. | `P8-PUBLIC-QUERY-001` |
 | Member publication clarity | Member profile visibility pages show dignified publication-gate copy on member routes only. | `P8-MEMBER-HINT-001` |
+| Admin publication approval | Public profile approval requires admin/chief_admin, admin surface policy, audit trail, and member standing re-validation before approval audit emission. | `P8-APPROVAL-001` |
 
 ## Phase 1 Residual Risks
 

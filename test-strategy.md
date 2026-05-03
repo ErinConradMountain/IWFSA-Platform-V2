@@ -66,6 +66,9 @@ Phase 2 adds these required test IDs:
 | `P7-SESSION-001` | Standing change appends history, emits audit, and rotates active subject sessions. |
 | `P7-API-001` | Admin fee update recalculates standing and blocks old member session cookies. |
 | `P7-ELIGIBILITY-001` | Review-standing members can access member surface but RSVP to waitlist by default. |
+| `P8-PUBLIC-QUERY-001` | Public profile repository pushes standing, visibility, consent, and approval predicates into the data layer. |
+| `P8-MEMBER-HINT-001` | Member publication-gate hint renders only on member profile routes. |
+| `P8-APPROVAL-001` | Admin publication approval requires RBAC, member standing re-validation, valid state transition, and PII-redacted audit. |
 
 ## Layers
 

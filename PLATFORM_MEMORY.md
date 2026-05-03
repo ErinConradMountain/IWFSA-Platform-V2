@@ -20,6 +20,7 @@ These constraints are active platform memory and apply to every future phase.
 - Phase 8 begins with public visibility locked at both policy and repository boundaries: standing `good`, public visibility, granted consent, and admin approval are all required before public render.
 - Member-facing publication hints must use dignified consent language and remain scoped to member profile routes only.
 - Phase tags must only be created from a clean CI-passing commit; generated build output, dependencies, environment files, logs, temp folders, IDE settings, and local reflection files stay out of Git.
+- Public profile publication approval now has an audit-led state machine: `pending_review -> approved -> published`, with revocation resetting effective visibility to hidden/private.
 
 ## Current Seed Strategy
 

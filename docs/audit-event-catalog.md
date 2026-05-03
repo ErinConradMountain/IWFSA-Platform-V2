@@ -34,6 +34,10 @@ Audit events provide operational evidence for identity, consent, import, standin
 | `STANDING_CHANGED` | Admin changes member standing | `membership_status` | Raw member identifiers redacted. |
 | `STANDING_DENIED` | Blocked member route access denied | `membership_status` | Emits alongside policy denial. |
 | `PUBLIC_PROFILE_APPROVED` | Admin approves public render | `member_profile` | Future approval workflow event. |
+| `profile.publication_requested` | Member requests public profile review | `member_profile` | Metadata schema: `actor_id`, `member_id`, `profile_version`, `previous_state`, `new_state`, `correlation_id`, `review_notes`; notes are PII-redacted. |
+| `profile.publication_reviewed` | Admin records review without approval | `member_profile` | Same schema as publication request; no public render state change. |
+| `profile.publication_approved` | Admin approves the profile version for publication | `member_profile` | Requires admin/chief_admin, admin surface, audit trail, and member standing re-check as `good`. |
+| `profile.publication_revoked` | Member or admin revokes public publication | `member_profile` | Resets effective public visibility to private/hidden and requires audit correlation. |
 | `EVENT_STATE_CHANGED` | Admin publishes, closes, or archives event | `event` | Metadata includes previous and new state. |
 | `RSVP_REGISTERED` | Eligible member registers within capacity | `event` | No raw member PII in metadata. |
 | `WAITLIST_JOINED` | Eligible member joins full event waitlist | `event` | Metadata includes state only. |

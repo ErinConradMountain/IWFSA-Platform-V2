@@ -38,4 +38,20 @@ Honorary and memorial workflows may have distinct standing inputs where no livin
 - Member consent or visibility changes emit `CONSENT_VISIBILITY_CHANGED`.
 - Admin approval emits `PUBLIC_PROFILE_APPROVED`.
 - Standing changes that alter public eligibility emit `STANDING_VISIBILITY_CHANGED` when Phase 8 persistence is wired.
-- Public content request and approval workflows should add `PUBLIC_CONTENT_REQUESTED` and `PUBLIC_CONTENT_APPROVED` before broad public routing.
+- Public content request and approval workflows emit `profile.publication_requested`, `profile.publication_reviewed`, `profile.publication_approved`, and `profile.publication_revoked`.
+
+## Approval Workflow
+
+```mermaid
+stateDiagram-v2
+  [*] --> pending_review
+  pending_review --> pending_review: profile.publication_reviewed
+  pending_review --> approved: profile.publication_approved
+  approved --> published: publication job
+  pending_review --> revoked: profile.publication_revoked
+  approved --> revoked: profile.publication_revoked
+  published --> revoked: profile.publication_revoked
+  revoked --> pending_review: profile.publication_requested
+```
+
+Approval requires `admin` or `chief_admin`, admin surface policy, audit trail, and a same-request member standing re-check of `good`.
