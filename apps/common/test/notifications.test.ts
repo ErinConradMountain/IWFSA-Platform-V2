@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { createAuditEventEmitter, createInMemoryAuditRepository } from "@iwfsa/common/audit";
-import { evaluateNotificationPolicy, sanitizeNotificationPreferences } from "@iwfsa/common/notification-policy";
+import { evaluateBroadcastAudience, evaluateNotificationPolicy, sanitizeNotificationPreferences } from "@iwfsa/common/notification-policy";
 import {
   cancelPendingNotifications,
   createInMemoryNotificationOutboxRepository,
@@ -118,9 +118,45 @@ test("outbox enqueue is idempotent and failed delivery uses exponential retry wi
   const failed = repository.list()[0];
   assert.equal(failed.attempts, 1);
   assert.equal(failed.status, "pending");
-  assert.equal(failed.nextRetryAt, "2026-05-03T12:01:00.000Z");
+  assert.equal(failed.nextRetryAt, "2026-05-03T12:00:30.000Z");
   assert.equal(auditRepo.list().filter((event) => event.action === "notification.failed").length, 1);
-  assert.equal(repository.listDue("2026-05-03T12:00:30.000Z").length, 0);
+  assert.equal(repository.listDue("2026-05-03T12:00:29.000Z").length, 0);
+});
+
+test("broadcast audience matrix excludes review blocked opt-out and expired consent", () => {
+  const currentYear = 2026;
+  const optIn = (memberId: string, consentScopeYear = currentYear) => sanitizeNotificationPreferences({
+    memberId,
+    consentScopeYear,
+    updatedAt: "2026-05-03T12:00:00.000Z",
+    preferences: { admin_broadcast: { in_app: true } }
+  });
+  const optOut = sanitizeNotificationPreferences({
+    memberId: "good-opt-out",
+    consentScopeYear: currentYear,
+    updatedAt: "2026-05-03T12:00:00.000Z",
+    preferences: { admin_broadcast: { in_app: false } }
+  });
+
+  const result = evaluateBroadcastAudience({
+    channel: "in_app",
+    currentYear,
+    candidates: [
+      { memberId: "good-opt-in", standing: "good", consent: "granted", visibility: "member_only", preferences: optIn("good-opt-in") },
+      { memberId: "review-member", standing: "review", consent: "granted", visibility: "member_only", preferences: optIn("review-member") },
+      { memberId: "blocked-member", standing: "blocked", consent: "granted", visibility: "member_only", preferences: optIn("blocked-member") },
+      { memberId: "good-opt-out", standing: "good", consent: "granted", visibility: "member_only", preferences: optOut },
+      { memberId: "expired-member", standing: "good", consent: "granted", visibility: "member_only", preferences: optIn("expired-member", 2025) }
+    ]
+  });
+
+  assert.deepEqual(result.included.map((member) => member.memberId), ["good-opt-in"]);
+  assert.deepEqual(result.excluded.map((entry) => entry.reason), [
+    "STANDING_NOT_ELIGIBLE",
+    "STANDING_NOT_ELIGIBLE",
+    "BROADCAST_OPT_IN_REQUIRED",
+    "CONSENT_SCOPE_EXPIRED"
+  ]);
 });
 
 test("consent revocation cancels pending outbox messages and emits redacted audit evidence", () => {

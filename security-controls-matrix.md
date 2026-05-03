@@ -42,6 +42,9 @@
 | Dual approval stewardship | Honorary and memorial content requires first admin approval plus chief admin final approval before publication audit events emit. | `P8-DUAL-APPROVAL-001` |
 | Consent-aware notifications | Celebrations require current-year consent, non-private visibility, good standing, and explicit channel opt-in before enqueue. | `P9-NOTIFICATION-POLICY-001` |
 | Outbox delivery boundary | Notification delivery uses deterministic outbox IDs, retry scheduling, cancellation, and redacted audit events. | `P9-OUTBOX-001` |
+| Worker provider boundary | Fake provider worker verifies idempotent processing, 30s/15m/5-attempt retry policy, and dead-letter failure state before real channels. | `P9-WORKER-001` |
+| RSVP notification producer | RSVP confirmation enqueue re-validates consent, standing, and preferences, and skips review-standing delivery with audit evidence. | `P9-RSVP-PRODUCER-001` |
+| Broadcast preview exclusion | Admin broadcast preview excludes review, blocked, opt-out, expired-consent, and hidden candidates without writing outbox rows. | `P9-BROADCAST-001` |
 
 ## Phase 1 Residual Risks
 

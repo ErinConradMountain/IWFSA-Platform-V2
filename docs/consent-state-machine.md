@@ -34,3 +34,7 @@ Public preview returns exactly the fields that the public surface may render. If
 ## Dignity Rule
 
 Microcopy must explain who can see a field and how the member can change it later.
+
+## Notification Consent
+
+Notification consent is event-type, channel, and year scoped. RSVP confirmations require granted consent at enqueue time. Broadcast and celebratory delivery require explicit current-year opt-in, and consent revocation cancels pending outbox rows before worker delivery.

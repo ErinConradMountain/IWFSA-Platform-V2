@@ -185,3 +185,13 @@
 **Test References:** `P9-NOTIFICATION-POLICY-001`, `P9-OUTBOX-001`, `P9-PREFERENCES-001`.
 
 **Status:** Accepted.
+
+## 2026-05-03 - Phase 9 Worker, RSVP Producer, And Broadcast Preview
+
+**Decision:** Add a fake-provider notification worker with bounded retry/dead-letter behavior, wire RSVP confirmation production through the notification policy, and expose an admin broadcast preview endpoint that evaluates audience eligibility without enqueueing messages.
+
+**Rationale:** Provider behavior, producer integration, and admin broadcast targeting must be proven before real delivery channels or UI are added. This keeps Phase 9 idempotent, consent-aware, and auditable.
+
+**Test References:** `P9-WORKER-001`, `P9-RSVP-PRODUCER-001`, `P9-BROADCAST-001`.
+
+**Status:** Accepted.

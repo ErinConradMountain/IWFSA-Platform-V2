@@ -44,6 +44,10 @@ Audit events provide operational evidence for identity, consent, import, standin
 | `notification.sent` | Worker receives provider accepted/sent result | `outbox_message` | Metadata includes event type, payload reference, and provider reference only. |
 | `notification.failed` | Worker delivery attempt fails and is scheduled for retry | `outbox_message` | Metadata includes event type, payload reference, and attempt count. |
 | `notification.cancelled` | Pending message is cancelled after consent revocation or policy change | `outbox_message` | Metadata includes event type and payload reference only. |
+| `notification.outbox_processed` | Worker processes one outbox row through a provider adapter | `outbox_message` | Metadata includes event type, payload reference, attempts, and result `sent`, `retry_scheduled`, or `dead_letter`. |
+| `notification.broadcast_previewed` | Admin previews a broadcast audience without enqueueing messages | `notification_broadcast` | Metadata includes channel, target count, and excluded count only. |
+| `rsvp.notification_enqueued` | RSVP confirmation outbox row is created after standing/consent check | `outbox_message` | Metadata includes event ID and RSVP state only. |
+| `rsvp.notification_skipped` | RSVP succeeds but notification enqueue is blocked by policy | `outbox_message` | Metadata includes event ID and safe denial reason only. |
 | `EVENT_STATE_CHANGED` | Admin publishes, closes, or archives event | `event` | Metadata includes previous and new state. |
 | `RSVP_REGISTERED` | Eligible member registers within capacity | `event` | No raw member PII in metadata. |
 | `WAITLIST_JOINED` | Eligible member joins full event waitlist | `event` | Metadata includes state only. |

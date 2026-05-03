@@ -24,6 +24,7 @@ export type TaskId =
   | "admin.standing.manage"
   | "admin.events.manage"
   | "admin.public-review.queue"
+  | "admin.notifications.broadcast"
   | "admin.audit.read"
   | "admin.support-notes.add";
 
@@ -63,6 +64,7 @@ export const SURFACE_TASK_MATRIX: Record<TaskId, { surface: Surface; fallback: s
   "admin.standing.manage": { surface: "admin", fallback: "/admin" },
   "admin.events.manage": { surface: "admin", fallback: "/admin" },
   "admin.public-review.queue": { surface: "admin", fallback: "/admin" },
+  "admin.notifications.broadcast": { surface: "admin", fallback: "/admin" },
   "admin.audit.read": { surface: "admin", fallback: "/admin" },
   "admin.support-notes.add": { surface: "admin", fallback: "/admin" }
 };

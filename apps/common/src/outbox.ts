@@ -1,6 +1,6 @@
 import type { AuditEventEmitter } from "@iwfsa/common/audit";
 
-export type NotificationEventType = "birthday" | "rsvp" | "standing_change" | "celebration" | "admin_operational";
+export type NotificationEventType = "birthday" | "rsvp" | "rsvp.confirmation" | "standing_change" | "celebration" | "admin_operational" | "admin_broadcast";
 export type NotificationOutboxStatus = "pending" | "sent" | "failed" | "cancelled";
 
 export type NotificationOutboxMessage = {
@@ -18,15 +18,27 @@ export type NotificationOutboxRepository = {
   enqueue(message: NotificationOutboxMessage): NotificationOutboxMessage;
   listDue(now: string, limit?: number): NotificationOutboxMessage[];
   markSent(id: string, sentAt: string): NotificationOutboxMessage | null;
-  markFailed(id: string, failedAt: string): NotificationOutboxMessage | null;
+  markFailed(id: string, failedAt: string, retryPolicy?: NotificationRetryPolicy): NotificationOutboxMessage | null;
   cancelByPayloadRef(payloadRef: string, cancelledAt: string): NotificationOutboxMessage[];
   list(): NotificationOutboxMessage[];
+};
+
+export type NotificationRetryPolicy = {
+  baseDelayMs: number;
+  maxDelayMs: number;
+  maxAttempts: number;
 };
 
 export type NotificationDeliveryResult = {
   status: "sent" | "failed";
   providerRef?: string;
   reason?: string;
+};
+
+export const DEFAULT_NOTIFICATION_RETRY_POLICY: NotificationRetryPolicy = {
+  baseDelayMs: 30 * 1000,
+  maxDelayMs: 15 * 60 * 1000,
+  maxAttempts: 5
 };
 
 export function createNotificationOutboxMessage(input: {
@@ -80,13 +92,22 @@ export function createInMemoryNotificationOutboxRepository(): NotificationOutbox
     },
 
     markSent(id, sentAt) {
-      return update(id, (message) => ({ ...message, status: "sent", nextRetryAt: null, createdAt: message.createdAt || sentAt }));
+      return update(id, (message) => ({ ...message, status: "sent", attempts: message.attempts + 1, nextRetryAt: null, createdAt: message.createdAt || sentAt }));
     },
 
-    markFailed(id, failedAt) {
+    markFailed(id, failedAt, retryPolicy = DEFAULT_NOTIFICATION_RETRY_POLICY) {
       return update(id, (message) => {
         const attempts = message.attempts + 1;
-        const retryDelayMs = Math.min(24 * 60 * 60 * 1000, 60 * 1000 * 2 ** Math.max(0, attempts - 1));
+        if (attempts >= retryPolicy.maxAttempts) {
+          return {
+            ...message,
+            status: "failed",
+            attempts,
+            nextRetryAt: null
+          };
+        }
+
+        const retryDelayMs = Math.min(retryPolicy.maxDelayMs, retryPolicy.baseDelayMs * 2 ** Math.max(0, attempts - 1));
         return {
           ...message,
           status: "pending",
@@ -120,6 +141,7 @@ export function processNotificationOutboxBatch(input: {
   audit: AuditEventEmitter;
   now: string;
   limit?: number;
+  retryPolicy?: NotificationRetryPolicy;
 }): Promise<NotificationOutboxMessage[]> {
   return Promise.all(
     input.repository.listDue(input.now, input.limit).map(async (message) => {
@@ -145,7 +167,7 @@ export function processNotificationOutboxBatch(input: {
         // Retry handling below intentionally hides provider detail from callers.
       }
 
-      const failed = input.repository.markFailed(message.id, input.now) || message;
+      const failed = input.repository.markFailed(message.id, input.now, input.retryPolicy) || message;
       input.audit.emit({
         action: "notification.failed",
         actor: "system",

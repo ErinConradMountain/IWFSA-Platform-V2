@@ -52,6 +52,7 @@ This file is the source of truth for Phase 2 route generation, policy checks, ta
 | `/api/admin/public-profiles/{id}/approve` | `admin.public-review.queue` | Approve public profile publication request | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on`, `member_standing=good` | `/` |
 | `/api/admin/public-profiles/{id}/revoke` | `admin.public-review.queue` | Revoke public profile publication | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on`, `member_standing=good` | `/` |
 | `/api/admin/public-profiles/{id}/final-approve` | `admin.public-review.queue` | Complete honorary or memorial final approval | `role=chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on`, `member_standing=good` | `/` |
+| `/api/admin/notifications/broadcast/preview` | `admin.notifications.broadcast` | Preview eligible notification broadcast audience without enqueueing | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on`, CSRF token | `/` |
 | `/admin/audit` | `admin.audit.read` | Read audit logs | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
 | `/admin/support-notes` | `admin.support-notes.add` | Add support notes | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
 

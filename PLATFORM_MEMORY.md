@@ -34,7 +34,9 @@ These constraints are active platform memory and apply to every future phase.
 
 - Phase 9 starts with outbox-first delivery: no feature handler should call email, SMS, or in-app providers directly.
 - Celebratory notifications require granted, current-year consent, non-private visibility, good standing, and explicit channel opt-in.
-- Notification worker evidence uses `notification.sent`, `notification.failed`, and `notification.cancelled`; member preference updates use `notification.preferences_updated`.
+- Notification worker evidence uses `notification.outbox_processed`, retry results, dead-letter state, and `notification.cancelled`; member preference updates use `notification.preferences_updated`.
+- RSVP confirmation is the first producer and writes `rsvp.confirmation` only when standing, consent, and preferences allow it; review-standing RSVP is waitlisted but notification-skipped.
+- Admin broadcast remains preview-only until dispatch is explicitly approved; preview excludes review, blocked, opt-out, expired-consent, and hidden candidates without writing outbox rows.
 
 ## Current Seed Strategy
 

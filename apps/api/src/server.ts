@@ -13,7 +13,16 @@ import {
   type EventStatus
 } from "@iwfsa/common/events";
 import { commitImport, previewImport } from "@iwfsa/common/import-pipeline";
-import { createInMemoryNotificationPreferenceRepository, sanitizeNotificationPreferences, type NotificationPreferenceRepository } from "@iwfsa/common/notification-policy";
+import {
+  createInMemoryNotificationPreferenceRepository,
+  evaluateBroadcastAudience,
+  evaluateNotificationPolicy,
+  sanitizeNotificationPreferences,
+  type BroadcastAudienceCandidate,
+  type NotificationChannel,
+  type NotificationPreferenceRepository
+} from "@iwfsa/common/notification-policy";
+import { createInMemoryNotificationOutboxRepository, createNotificationOutboxMessage, type NotificationOutboxRepository } from "@iwfsa/common/outbox";
 import type { PlatformRepositoryAdapter } from "@iwfsa/common/persistence";
 import { evaluate, type Surface, type TaskId } from "@iwfsa/common/policy";
 import type { PlatformRepositories } from "@iwfsa/common/repositories";
@@ -56,6 +65,7 @@ type ApiDependencies = {
   publicApprovalRepository?: PublicApprovalRepository;
   publicProfileRepository?: PublicProfileRepository;
   notificationPreferenceRepository?: NotificationPreferenceRepository;
+  notificationOutboxRepository?: NotificationOutboxRepository;
   eventRepositories?: EventRepositories;
   standingRepositories?: StandingRepositories;
   logSink?: LogSink;
@@ -226,6 +236,7 @@ export function createApiServer(config: ServiceConfig, dependencies: ApiDependen
   const standingRepositories = dependencies.standingRepositories || createStandingRepositories();
   const publicApprovalRepository = dependencies.publicApprovalRepository || createInMemoryPublicApprovalRepository();
   const notificationPreferenceRepository = dependencies.notificationPreferenceRepository || createInMemoryNotificationPreferenceRepository();
+  const notificationOutboxRepository = dependencies.notificationOutboxRepository || createInMemoryNotificationOutboxRepository();
   const publicProfileRepository = dependencies.publicProfileRepository || createPublicProfileRepository({
     query() {
       return { rows: [] };
@@ -560,6 +571,67 @@ export function createApiServer(config: ServiceConfig, dependencies: ApiDependen
         correlationId,
         consentScopeYear: preferences.consentScopeYear,
         eventTypes: Object.keys(preferences.preferences)
+      });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/admin/notifications/broadcast/preview") {
+      if (!applyPolicy(response, { ...authContext, surface: "admin", task: "admin.notifications.broadcast", auditTrail: true }, auditRepository, correlationId)) {
+        return;
+      }
+
+      let body: Record<string, unknown> = {};
+      try {
+        body = await readJsonBody(request);
+      } catch {
+        sendJson(response, 400, { status: "rejected", message: "The request could not be completed." });
+        return;
+      }
+
+      const candidates = Array.isArray(body.candidates) ? body.candidates : [];
+      const currentYear = typeof body.currentYear === "number" && Number.isInteger(body.currentYear) ? body.currentYear : new Date().getUTCFullYear();
+      const channel: NotificationChannel = body.channel === "email" || body.channel === "sms" ? body.channel : "in_app";
+      const broadcastCandidates: BroadcastAudienceCandidate[] = candidates
+        .filter((candidate): candidate is Record<string, unknown> => Boolean(candidate && typeof candidate === "object"))
+        .map((candidate) => {
+          const memberId = typeof candidate.memberId === "string" ? candidate.memberId : "member";
+          const consentScopeYear = typeof candidate.consentScopeYear === "number" && Number.isInteger(candidate.consentScopeYear) ? candidate.consentScopeYear : currentYear;
+          return {
+            memberId,
+            standing: candidate.standing === "good" || candidate.standing === "review" || candidate.standing === "blocked" || candidate.standing === "active" ? candidate.standing : "blocked",
+            consent: candidate.consent === "granted" || candidate.consent === "revoked" || candidate.consent === "not_required" ? candidate.consent : "missing",
+            visibility: candidate.visibility === "public" || candidate.visibility === "member_only" ? candidate.visibility : "hidden",
+            preferences: sanitizeNotificationPreferences({
+              memberId,
+              consentScopeYear,
+              preferences: candidate.preferences,
+              updatedAt: new Date().toISOString()
+            })
+          };
+        });
+      const result = evaluateBroadcastAudience({
+        candidates: broadcastCandidates,
+        channel,
+        currentYear
+      });
+      emitAudit(
+        auditRepository,
+        "notification.broadcast_previewed",
+        correlationId,
+        {
+          channel,
+          targetCount: result.included.length,
+          excludedCount: result.excluded.length
+        },
+        authContext.subject || "admin",
+        "notification_broadcast",
+        "preview"
+      );
+      sendJson(response, 202, {
+        status: "accepted",
+        correlationId,
+        targetCount: result.included.length,
+        excludedCount: result.excluded.length
       });
       return;
     }
@@ -979,11 +1051,36 @@ export function createApiServer(config: ServiceConfig, dependencies: ApiDependen
       }
 
       try {
-        const rsvp = rsvpToEvent(eventRepositories, rsvpMatch[1], participantFromAuth(authContext), createAuditEventEmitter(auditRepository), correlationId);
+        const participant = participantFromAuth(authContext);
+        const rsvp = rsvpToEvent(eventRepositories, rsvpMatch[1], participant, createAuditEventEmitter(auditRepository), correlationId);
+        const preferences = notificationPreferenceRepository.findByMemberId(participant.memberId);
+        const notificationDecision = evaluateNotificationPolicy({
+          eventType: "rsvp.confirmation",
+          channel: "in_app",
+          consent: participant.consent,
+          visibility: "member_only",
+          standing: participant.standing,
+          preferences,
+          currentYear: new Date().getUTCFullYear()
+        });
+        const notificationCode = notificationDecision.decision === "ALLOW" ? "notification_enqueued" : "notification_skipped";
+        if (notificationDecision.decision === "ALLOW") {
+          notificationOutboxRepository.enqueue(createNotificationOutboxMessage({
+            id: `rsvp:${rsvp.eventId}:${rsvp.memberId}:${rsvp.state}`,
+            eventType: "rsvp.confirmation",
+            payloadRef: `event:${rsvp.eventId}:member:${rsvp.memberId}:rsvp:${rsvp.state}`,
+            createdAt: rsvp.createdAt,
+            correlationId
+          }));
+          emitAudit(auditRepository, "rsvp.notification_enqueued", correlationId, { eventId: rsvp.eventId, state: rsvp.state }, participant.memberId, "outbox_message", "opaque");
+        } else {
+          emitAudit(auditRepository, "rsvp.notification_skipped", correlationId, { eventId: rsvp.eventId, reason: notificationDecision.reason }, participant.memberId, "outbox_message", "opaque");
+        }
         sendJson(response, 202, {
           status: rsvp.state,
           message: rsvp.state === "registered" ? "You're in. See you there." : "You are on the waitlist.",
-          waitlistPosition: rsvp.waitlistPosition
+          waitlistPosition: rsvp.waitlistPosition,
+          notificationCode
         });
       } catch {
         sendJson(response, 403, {

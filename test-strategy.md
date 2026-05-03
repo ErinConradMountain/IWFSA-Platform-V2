@@ -77,6 +77,9 @@ Phase 2 adds these required test IDs:
 | `P9-NOTIFICATION-POLICY-001` | Notification policy blocks celebration delivery without current-year consent, non-private visibility, good standing, and opt-in. |
 | `P9-OUTBOX-001` | Notification outbox enqueue is idempotent, failed delivery schedules retry, and consent revocation cancels pending items. |
 | `P9-PREFERENCES-001` | Member notification preferences are CSRF-protected, annual-scope persisted, sanitized, and audited. |
+| `P9-WORKER-001` | Notification worker uses a fake provider, avoids duplicate delivery on rerun, schedules bounded backoff, and dead-letters exhausted rows. |
+| `P9-RSVP-PRODUCER-001` | RSVP confirmation producer writes a redacted outbox payload only for eligible standing/consent/preference state. |
+| `P9-BROADCAST-001` | Admin broadcast preview is RBAC-gated, excludes ineligible audiences, emits audit, and writes zero outbox rows. |
 
 ## Layers
 

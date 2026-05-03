@@ -9,6 +9,7 @@ import { createInMemoryRepositories } from "@iwfsa/common/repositories";
 import { createInMemorySessionRepository } from "@iwfsa/common/session-repository";
 import { createEventRepositories } from "@iwfsa/common/events";
 import { createInMemoryNotificationPreferenceRepository } from "@iwfsa/common/notification-policy";
+import { createInMemoryNotificationOutboxRepository } from "@iwfsa/common/outbox";
 import { createInMemoryPublicApprovalRepository } from "@iwfsa/common/public-approval-repository";
 import { createStandingRepositories, openMembershipYear } from "@iwfsa/common/standing";
 import { createAuditEventEmitter } from "@iwfsa/common/audit";
@@ -728,6 +729,150 @@ test("member notification preferences are CSRF-protected, scoped annually, and a
   assert.equal((saved?.preferences.celebration as Record<string, unknown>).phone, undefined);
   assert.ok(auditRepository.list().some((event) => event.action === "notification.preferences_updated"));
   assert.equal(JSON.stringify(auditRepository.list()).includes("should-not-persist"), false);
+});
+
+test("member RSVP enqueues confirmation only when standing and preferences allow it", async () => {
+  const auditRepository = createInMemoryAuditRepository();
+  const notificationPreferenceRepository = createInMemoryNotificationPreferenceRepository();
+  const notificationOutboxRepository = createInMemoryNotificationOutboxRepository();
+  const server = createApiServer(createTestApiConfig(), {
+    sessionRepository: createInMemorySessionRepository(),
+    auditRepository,
+    notificationPreferenceRepository,
+    notificationOutboxRepository
+  });
+
+  await withServer(server, async (baseUrl) => {
+    const login = await createSession(baseUrl, "member", "rsvp-notify");
+    const csrf = await getCsrf(baseUrl, login.sessionCookie);
+    const response = await fetch(`${baseUrl}/api/events/event-1/rsvp`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-csrf-token": csrf.csrfToken,
+        cookie: csrf.cookie
+      },
+      body: "{}"
+    });
+    const body = (await response.json()) as Record<string, unknown>;
+
+    assert.equal(response.status, 202);
+    assert.equal(body.notificationCode, "notification_enqueued");
+  });
+
+  assert.equal(notificationOutboxRepository.list().length, 1);
+  assert.equal(notificationOutboxRepository.list()[0].eventType, "rsvp.confirmation");
+  assert.equal(notificationOutboxRepository.list()[0].payloadRef.includes("@"), false);
+  assert.ok(auditRepository.list().some((event) => event.action === "rsvp.notification_enqueued"));
+});
+
+test("review standing RSVP succeeds but notification enqueue is skipped", async () => {
+  const auditRepository = createInMemoryAuditRepository();
+  const notificationOutboxRepository = createInMemoryNotificationOutboxRepository();
+  const server = createApiServer(createTestApiConfig(), {
+    sessionRepository: createInMemorySessionRepository(),
+    auditRepository,
+    notificationOutboxRepository
+  });
+
+  await withServer(server, async (baseUrl) => {
+    const login = await createSession(baseUrl, "member", "rsvp-review");
+    const rotateCsrf = await getCsrf(baseUrl, login.sessionCookie);
+    const rotated = await fetch(`${baseUrl}/api/auth/session/rotate`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-csrf-token": rotateCsrf.csrfToken,
+        cookie: rotateCsrf.cookie
+      },
+      body: JSON.stringify({ reason: "standing_change", standing: "review", consent: "granted" })
+    });
+    const reviewCookie = rotated.headers.get("set-cookie") || rotateCsrf.cookie;
+    const csrf = await getCsrf(baseUrl, reviewCookie);
+    const response = await fetch(`${baseUrl}/api/events/event-1/rsvp`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-csrf-token": csrf.csrfToken,
+        cookie: csrf.cookie
+      },
+      body: "{}"
+    });
+    const body = (await response.json()) as Record<string, unknown>;
+
+    assert.equal(response.status, 202);
+    assert.equal(body.status, "waitlisted");
+    assert.equal(body.notificationCode, "notification_skipped");
+  });
+
+  assert.equal(notificationOutboxRepository.list().length, 0);
+  assert.ok(auditRepository.list().some((event) => event.action === "rsvp.notification_skipped" && event.redactedMetadata.reason === "STANDING_NOT_ELIGIBLE"));
+});
+
+test("admin broadcast preview evaluates audience without writing outbox rows", async () => {
+  const auditRepository = createInMemoryAuditRepository();
+  const notificationOutboxRepository = createInMemoryNotificationOutboxRepository();
+  const server = createApiServer(createTestApiConfig(), {
+    sessionRepository: createInMemorySessionRepository(),
+    auditRepository,
+    notificationOutboxRepository
+  });
+
+  await withServer(server, async (baseUrl) => {
+    const login = await createSession(baseUrl, "admin", "broadcast-admin");
+    const csrf = await getCsrf(baseUrl, login.sessionCookie);
+    const response = await fetch(`${baseUrl}/api/admin/notifications/broadcast/preview`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-csrf-token": csrf.csrfToken,
+        cookie: csrf.cookie
+      },
+      body: JSON.stringify({
+        currentYear: 2026,
+        channel: "in_app",
+        candidates: [
+          { memberId: "good-in", standing: "good", consent: "granted", visibility: "member_only", consentScopeYear: 2026, preferences: { admin_broadcast: { in_app: true } } },
+          { memberId: "review-out", standing: "review", consent: "granted", visibility: "member_only", consentScopeYear: 2026, preferences: { admin_broadcast: { in_app: true } } },
+          { memberId: "good-out", standing: "good", consent: "granted", visibility: "member_only", consentScopeYear: 2026, preferences: { admin_broadcast: { in_app: false } } }
+        ]
+      })
+    });
+    const body = (await response.json()) as Record<string, unknown>;
+
+    assert.equal(response.status, 202);
+    assert.equal(body.targetCount, 1);
+    assert.equal(body.excludedCount, 2);
+  });
+
+  assert.equal(notificationOutboxRepository.list().length, 0);
+  assert.ok(auditRepository.list().some((event) => event.action === "notification.broadcast_previewed" && event.redactedMetadata.targetCount === 1));
+});
+
+test("member role cannot preview admin notification broadcast", async () => {
+  const auditRepository = createInMemoryAuditRepository();
+  const server = createApiServer(createTestApiConfig(), {
+    sessionRepository: createInMemorySessionRepository(),
+    auditRepository
+  });
+
+  await withServer(server, async (baseUrl) => {
+    const login = await createSession(baseUrl, "member", "broadcast-member");
+    const csrf = await getCsrf(baseUrl, login.sessionCookie);
+    const response = await fetch(`${baseUrl}/api/admin/notifications/broadcast/preview`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-csrf-token": csrf.csrfToken,
+        cookie: csrf.cookie
+      },
+      body: JSON.stringify({ candidates: [] })
+    });
+
+    assert.equal(response.status, 403);
+  });
+
+  assert.ok(auditRepository.list().some((event) => event.action === "POLICY_DENY"));
 });
 
 test("admin public queue lists pending reviews and revokes approved profiles with audit", async () => {
