@@ -13,6 +13,8 @@ export type AuditAction =
   | "profile.publication_reviewed"
   | "profile.publication_approved"
   | "profile.publication_revoked"
+  | "profile.honorary_published"
+  | "profile.memorial_published"
   | "IMPORT_PREVIEWED"
   | "IMPORT_RESOLVED"
   | "IMPORT_FAILED"

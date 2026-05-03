@@ -37,6 +37,8 @@ Public endpoints must be cacheable only when they are anonymous, read-only, and 
 
 Cache keys are derived from URL path plus query parameters only. Public handlers must ignore `Authorization` and session cookies, must not emit `Set-Cookie`, and must not include internal IDs, consent state, standing state, or approval workflow state in public payloads.
 
+Public server-rendered views use the same projection allowlist as the public API: `displayName`, `biography`, and `updatedAt`. Templates must not place internal IDs, consent timestamps, review notes, standing state, workflow state, or private identifiers in HTML comments, hidden `data-*` attributes, meta tags, or structured data.
+
 ## Standing Rules
 
 - `good`: eligible for public rendering only after explicit public visibility, consent, and admin approval.
@@ -67,6 +69,10 @@ stateDiagram-v2
 
 Approval requires `admin` or `chief_admin`, admin surface policy, audit trail, and a same-request member standing re-check of `good`.
 
+Honorary and memorial content requires dual approval. An `admin` or `chief_admin` may complete the first approval, but only `chief_admin` may complete final approval and emit `profile.honorary_published` or `profile.memorial_published`.
+
 ## Queue Persistence Rules
 
 Approval queue state lives in `public_approval_record`. Review notes must be sanitized before persistence by stripping markup, truncating to the safe length limit, and redacting email and phone-like values. Duplicate approval attempts return the existing approved record rather than creating a second approval chain.
+
+Queue endpoints support status filters for `pending_review`, `approved`, `published`, and `revoked`. Queue responses exclude sanitized review notes and internal workflow commentary; failures return generic safe error codes such as `standing_changed`, `policy_denied`, or `invalid_transition`.

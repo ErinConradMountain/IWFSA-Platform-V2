@@ -5,6 +5,7 @@ import type { Standing } from "@iwfsa/common/session-repository";
 
 export type PublicationState = "pending_review" | "approved" | "published" | "revoked";
 export type PublicationAction = "request" | "review" | "approve" | "publish" | "revoke";
+export type PublicContentType = "profile" | "honorary" | "memorial";
 
 export type PublicApprovalPolicyInput = {
   role: Role | null;
@@ -22,7 +23,7 @@ export type PublicationTransition = {
   previousState: PublicationState;
   newState: PublicationState;
   visibility: "hidden" | "public";
-  auditAction: "profile.publication_requested" | "profile.publication_reviewed" | "profile.publication_approved" | "profile.publication_revoked";
+  auditAction: "profile.publication_requested" | "profile.publication_reviewed" | "profile.publication_approved" | "profile.publication_revoked" | "profile.honorary_published" | "profile.memorial_published";
 };
 
 export type PublicationAuditInput = {
@@ -102,6 +103,32 @@ export function transitionPublicationState(currentState: PublicationState, actio
   }
 
   throw new Error("invalid_publication_transition");
+}
+
+export function canFinalApprove(input: { role: Role | null; requiresDualApproval: boolean; reviewedBy: string | null; finalApprovedBy: string | null }): { allowed: boolean; reason: "FINAL_APPROVAL_ALLOWED" | "CHIEF_ADMIN_REQUIRED" | "ADMIN_APPROVAL_REQUIRED" | "FINAL_APPROVAL_ALREADY_RECORDED" | "DUAL_APPROVAL_NOT_REQUIRED" } {
+  if (!input.requiresDualApproval) {
+    return { allowed: false, reason: "DUAL_APPROVAL_NOT_REQUIRED" };
+  }
+  if (input.role !== "chief_admin") {
+    return { allowed: false, reason: "CHIEF_ADMIN_REQUIRED" };
+  }
+  if (!input.reviewedBy) {
+    return { allowed: false, reason: "ADMIN_APPROVAL_REQUIRED" };
+  }
+  if (input.finalApprovedBy) {
+    return { allowed: false, reason: "FINAL_APPROVAL_ALREADY_RECORDED" };
+  }
+  return { allowed: true, reason: "FINAL_APPROVAL_ALLOWED" };
+}
+
+export function publicationAuditForContentType(contentType: PublicContentType): "profile.publication_approved" | "profile.honorary_published" | "profile.memorial_published" {
+  if (contentType === "honorary") {
+    return "profile.honorary_published";
+  }
+  if (contentType === "memorial") {
+    return "profile.memorial_published";
+  }
+  return "profile.publication_approved";
 }
 
 export function emitPublicationAudit(audit: AuditEventEmitter, input: PublicationAuditInput & { action: PublicationTransition["auditAction"] }): void {

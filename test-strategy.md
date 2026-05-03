@@ -72,6 +72,8 @@ Phase 2 adds these required test IDs:
 | `P8-APPROVAL-REPO-001` | Public approval repository persists queue state, sanitizes review notes before storage, and rejects invalid revocation. |
 | `P8-CACHE-001` | Public profile endpoint emits cache-isolation headers and returns public-safe schema only. |
 | `P8-PROVENANCE-001` | CI provenance check verifies clean tracked tree, tag resolution when present, and SBOM component alignment. |
+| `P8-SSR-001` | Public gallery/story SSR renders only approved projection fields and never embeds private state in DOM or metadata. |
+| `P8-DUAL-APPROVAL-001` | Honorary/memorial publication requires admin first approval and chief admin final approval with one publish audit event. |
 
 ## Layers
 

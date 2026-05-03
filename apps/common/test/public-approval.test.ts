@@ -3,8 +3,10 @@ import assert from "node:assert/strict";
 
 import { createAuditEventEmitter, createInMemoryAuditRepository } from "@iwfsa/common/audit";
 import {
+  canFinalApprove,
   emitPublicationAudit,
   evaluatePublicApprovalPolicy,
+  publicationAuditForContentType,
   sanitizeReviewNotes,
   transitionPublicationState
 } from "@iwfsa/common/public-approval";
@@ -70,4 +72,17 @@ test("publication audit metadata redacts review notes and hashes metadata", () =
 test("review note sanitizer strips markup, redacts email and phone-like values, and truncates", () => {
   assert.equal(sanitizeReviewNotes("<b>Contact</b> a@b.co or +27 82 000 1111"), "Contact [REDACTED] or [REDACTED]");
   assert.equal(sanitizeReviewNotes("x".repeat(700)).length, 500);
+});
+
+test("chief admin final approval policy blocks non-chief and incomplete first approval", () => {
+  assert.equal(canFinalApprove({ role: "admin", requiresDualApproval: true, reviewedBy: "admin-1", finalApprovedBy: null }).reason, "CHIEF_ADMIN_REQUIRED");
+  assert.equal(canFinalApprove({ role: "chief_admin", requiresDualApproval: true, reviewedBy: null, finalApprovedBy: null }).reason, "ADMIN_APPROVAL_REQUIRED");
+  assert.equal(canFinalApprove({ role: "chief_admin", requiresDualApproval: true, reviewedBy: "admin-1", finalApprovedBy: "chief-1" }).reason, "FINAL_APPROVAL_ALREADY_RECORDED");
+  assert.equal(canFinalApprove({ role: "chief_admin", requiresDualApproval: true, reviewedBy: "admin-1", finalApprovedBy: null }).allowed, true);
+});
+
+test("publication audit action maps honorary and memorial content types", () => {
+  assert.equal(publicationAuditForContentType("profile"), "profile.publication_approved");
+  assert.equal(publicationAuditForContentType("honorary"), "profile.honorary_published");
+  assert.equal(publicationAuditForContentType("memorial"), "profile.memorial_published");
 });

@@ -165,3 +165,13 @@
 **Rationale:** Current phase tags mark local governance checkpoints, while Phase 10 release candidates require stronger cryptographic provenance for cutover rehearsal and supply-chain review.
 
 **Status:** Accepted.
+
+## 2026-05-03 - Phase 8 Stewardship UI, Rendering, And Dual Approval
+
+**Decision:** Add admin queue lifecycle endpoints for pending, approved, published, and revoked records; expose public gallery/story rendering through public-safe projection only; and require chief admin final approval for honorary and memorial publication.
+
+**Rationale:** Public storytelling is now a governed lifecycle, not a display toggle. Queue operations need audit evidence and standing re-validation, public SSR must not leak workflow or PII fields, and honorary/memorial records need elevated stewardship before publication.
+
+**Test References:** `P8-SSR-001`, `P8-DUAL-APPROVAL-001`.
+
+**Status:** Accepted.

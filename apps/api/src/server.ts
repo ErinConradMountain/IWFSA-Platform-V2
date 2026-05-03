@@ -16,7 +16,7 @@ import { commitImport, previewImport } from "@iwfsa/common/import-pipeline";
 import type { PlatformRepositoryAdapter } from "@iwfsa/common/persistence";
 import { evaluate, type Surface, type TaskId } from "@iwfsa/common/policy";
 import type { PlatformRepositories } from "@iwfsa/common/repositories";
-import { emitPublicationAudit, evaluatePublicApprovalPolicy, transitionPublicationState, type PublicationState } from "@iwfsa/common/public-approval";
+import { canFinalApprove, emitPublicationAudit, evaluatePublicApprovalPolicy, publicationAuditForContentType, transitionPublicationState, type PublicationState } from "@iwfsa/common/public-approval";
 import { createInMemoryPublicApprovalRepository, type PublicApprovalRepository } from "@iwfsa/common/public-approval-repository";
 import { createPublicProfileRepository, type PublicProfileRepository } from "@iwfsa/common/public-profile-repository";
 import { buildHealthPayload, readRequestBody, sendJson, type ServiceConfig } from "@iwfsa/common/runtime";
@@ -194,6 +194,27 @@ function participantFromAuth(authContext: ReturnType<typeof resolveAuthContext>)
     standing: authContext.standing === "anonymous" ? "blocked" : authContext.standing,
     consent: authContext.consent,
     groups: ["leaders"]
+  };
+}
+
+function serializeApprovalQueueRecord(record: ReturnType<PublicApprovalRepository["findById"]>) {
+  if (!record) {
+    return null;
+  }
+  return {
+    id: record.id,
+    profileId: record.profileId,
+    memberId: record.memberId,
+    profileVersion: record.profileVersion,
+    requestedAt: record.requestedAt,
+    reviewedBy: record.reviewedBy,
+    status: record.status,
+    approvedAt: record.approvedAt,
+    revokedAt: record.revokedAt,
+    contentType: record.contentType,
+    requiresDualApproval: record.requiresDualApproval,
+    finalApprovedBy: record.finalApprovedBy,
+    finalApprovedAt: record.finalApprovedAt
   };
 }
 
@@ -554,6 +575,22 @@ export function createApiServer(config: ServiceConfig, dependencies: ApiDependen
       return;
     }
 
+    if (request.method === "GET" && url.pathname === "/api/admin/public-profiles/queue") {
+      if (!applyPolicy(response, { ...authContext, surface: "admin", task: "admin.public-review.queue", auditTrail: true }, auditRepository, correlationId)) {
+        return;
+      }
+
+      const requestedStatus = url.searchParams.get("status");
+      const allowedStatus = ["pending_review", "approved", "published", "revoked"].includes(requestedStatus || "") ? requestedStatus : "pending_review";
+      const records = publicApprovalRepository.listByStatus(allowedStatus as PublicationState);
+      sendJson(response, 200, {
+        status: "accepted",
+        filter: allowedStatus,
+        records: records.map(serializeApprovalQueueRecord)
+      });
+      return;
+    }
+
     const approvalMatch = url.pathname.match(/^\/api\/admin\/public-profiles\/([^/]+)\/approve$/);
     if (request.method === "POST" && approvalMatch) {
       if (!applyPolicy(response, { ...authContext, surface: "admin", task: "admin.public-review.queue", auditTrail: true }, auditRepository, correlationId)) {
@@ -577,8 +614,9 @@ export function createApiServer(config: ServiceConfig, dependencies: ApiDependen
 
       if (!approvalPolicy.allowed) {
         emitAudit(auditRepository, "POLICY_DENY", correlationId, { reason: approvalPolicy.reason, surface: "admin", task: "admin.public-review.queue" });
-        sendJson(response, 403, {
+        sendJson(response, approvalPolicy.reason === "MEMBER_GOOD_STANDING_REQUIRED" ? 409 : 403, {
           status: "rejected",
+          code: approvalPolicy.reason === "MEMBER_GOOD_STANDING_REQUIRED" ? "standing_changed" : approvalPolicy.reason,
           message: "The request could not be completed."
         });
         return;
@@ -598,7 +636,9 @@ export function createApiServer(config: ServiceConfig, dependencies: ApiDependen
           memberId: approvalMatch[1],
           profileVersion: typeof body.profileVersion === "string" ? body.profileVersion : "profile-v1",
           requestedAt: new Date().toISOString(),
-          correlationId
+          correlationId,
+          contentType: body.contentType === "honorary" || body.contentType === "memorial" ? body.contentType : "profile",
+          requiresDualApproval: Boolean(body.requiresDualApproval || body.contentType === "honorary" || body.contentType === "memorial")
         });
         if (currentState !== "pending_review") {
           const existing = publicApprovalRepository.findById(approvalId);
@@ -643,6 +683,128 @@ export function createApiServer(config: ServiceConfig, dependencies: ApiDependen
           status: "rejected",
           message: "The request could not be completed."
         });
+      }
+      return;
+    }
+
+    const revokeMatch = url.pathname.match(/^\/api\/admin\/public-profiles\/([^/]+)\/revoke$/);
+    if (request.method === "POST" && revokeMatch) {
+      if (!applyPolicy(response, { ...authContext, surface: "admin", task: "admin.public-review.queue", auditTrail: true }, auditRepository, correlationId)) {
+        return;
+      }
+
+      let body: Record<string, unknown> = {};
+      try {
+        body = await readJsonBody(request);
+      } catch {
+        body = {};
+      }
+
+      const memberStanding = typeof body.memberStanding === "string" ? (body.memberStanding as Standing) : "blocked";
+      const approvalPolicy = evaluatePublicApprovalPolicy({ role: authContext.role, surface: "admin", memberStanding, auditTrail: true });
+      if (!approvalPolicy.allowed) {
+        emitAudit(auditRepository, "POLICY_DENY", correlationId, { reason: approvalPolicy.reason, surface: "admin", task: "admin.public-review.queue" });
+        sendJson(response, memberStanding !== "good" ? 409 : 403, {
+          status: "rejected",
+          code: memberStanding !== "good" ? "standing_changed" : approvalPolicy.reason,
+          message: "The request could not be completed."
+        });
+        return;
+      }
+
+      if (!auditRepository) {
+        sendJson(response, 500, { status: "rejected", message: "The request could not be completed." });
+        return;
+      }
+
+      try {
+        const approvalId = typeof body.approvalId === "string" ? body.approvalId : `approval:${revokeMatch[1]}`;
+        const existing = publicApprovalRepository.findById(approvalId);
+        if (!existing) {
+          sendJson(response, 404, { status: "not_found", message: "The route is unavailable." });
+          return;
+        }
+        const revoked = publicApprovalRepository.revokeApproval({
+          id: approvalId,
+          actorId: authContext.subject || "admin",
+          reviewNotes: typeof body.reviewNotes === "string" ? body.reviewNotes : "",
+          correlationId,
+          now: new Date().toISOString()
+        });
+        emitPublicationAudit(createAuditEventEmitter(auditRepository), {
+          action: "profile.publication_revoked",
+          actorId: authContext.subject || "admin",
+          memberId: revoked.memberId,
+          profileVersion: revoked.profileVersion,
+          previousState: existing.status,
+          newState: revoked.status,
+          reviewNotes: revoked.reviewNotesSanitized,
+          correlationId
+        });
+        sendJson(response, 202, { status: "accepted", correlationId, publicationState: revoked.status, visibility: "hidden" });
+      } catch {
+        sendJson(response, 409, { status: "rejected", code: "invalid_transition", message: "The request could not be completed." });
+      }
+      return;
+    }
+
+    const finalApproveMatch = url.pathname.match(/^\/api\/admin\/public-profiles\/([^/]+)\/final-approve$/);
+    if (request.method === "POST" && finalApproveMatch) {
+      if (!applyPolicy(response, { ...authContext, surface: "admin", task: "admin.public-review.queue", auditTrail: true }, auditRepository, correlationId)) {
+        return;
+      }
+
+      let body: Record<string, unknown> = {};
+      try {
+        body = await readJsonBody(request);
+      } catch {
+        body = {};
+      }
+
+      const approvalId = typeof body.approvalId === "string" ? body.approvalId : `approval:${finalApproveMatch[1]}`;
+      const existing = publicApprovalRepository.findById(approvalId);
+      if (!existing) {
+        sendJson(response, 404, { status: "not_found", message: "The route is unavailable." });
+        return;
+      }
+
+      const decision = canFinalApprove({
+        role: authContext.role,
+        requiresDualApproval: existing.requiresDualApproval,
+        reviewedBy: existing.reviewedBy,
+        finalApprovedBy: existing.finalApprovedBy
+      });
+      if (!decision.allowed) {
+        emitAudit(auditRepository, "POLICY_DENY", correlationId, { reason: decision.reason, surface: "admin", task: "admin.public-review.queue" });
+        sendJson(response, decision.reason === "CHIEF_ADMIN_REQUIRED" ? 403 : 409, { status: "rejected", code: decision.reason, message: "The request could not be completed." });
+        return;
+      }
+
+      if (!auditRepository) {
+        sendJson(response, 500, { status: "rejected", message: "The request could not be completed." });
+        return;
+      }
+
+      try {
+        const published = publicApprovalRepository.finalApprove({
+          id: approvalId,
+          actorId: authContext.subject || "chief_admin",
+          correlationId,
+          now: new Date().toISOString()
+        });
+        emitPublicationAudit(createAuditEventEmitter(auditRepository), {
+          action: publicationAuditForContentType(published.contentType),
+          actorId: authContext.subject || "chief_admin",
+          memberId: published.memberId,
+          profileVersion: published.profileVersion,
+          previousState: existing.status,
+          newState: published.status,
+          reviewNotes: published.reviewNotesSanitized,
+          correlationId
+        });
+        sendJson(response, 202, { status: "accepted", publicationState: published.status, contentType: published.contentType });
+      } catch {
+        sendJson(response, 409, { status: "rejected", code: "invalid_transition", message: "The request could not be completed." });
       }
       return;
     }

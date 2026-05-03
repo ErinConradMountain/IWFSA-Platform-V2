@@ -38,6 +38,8 @@
 | Admin publication approval | Public profile approval requires admin/chief_admin, admin surface policy, audit trail, and member standing re-validation before approval audit emission. | `P8-APPROVAL-001` |
 | Approval persistence sanitization | Public approval records persist only sanitized, length-limited review notes and preserve restart-safe queue state. | `P8-APPROVAL-REPO-001` |
 | Public cache isolation | Public profile endpoint emits public cache headers, ignores auth/session inputs, strips cookies, and returns public-safe fields only. | `P8-CACHE-001` |
+| Public SSR isolation | Public gallery and story pages render only approved public projection fields and no hidden private state in DOM, meta tags, or structured data. | `P8-SSR-001` |
+| Dual approval stewardship | Honorary and memorial content requires first admin approval plus chief admin final approval before publication audit events emit. | `P8-DUAL-APPROVAL-001` |
 
 ## Phase 1 Residual Risks
 

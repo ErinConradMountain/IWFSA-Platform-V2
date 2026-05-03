@@ -11,6 +11,9 @@ This file is the source of truth for Phase 2 route generation, policy checks, ta
 | `/` | `public.home` | View homepage | `surface=public` | `/` |
 | `/public-profiles` | `public.profiles.approved` | View approved public profiles | `surface=public`, `standing=good`, `visibility=public`, `consent=granted`, `approved=true` | `/404` |
 | `/api/public/profiles` | `public.profiles.approved` | Read approved public-safe profile projection | `surface=public`, `standing=good`, `visibility=public`, `consent=granted`, `approved=true`, cache headers | `/404` |
+| `/public/gallery` | `public.profiles.approved` | Render approved public-safe gallery | `surface=public`, projection allowlist, anonymous cache-safe rendering | `/404` |
+| `/public/story/{id}` | `public.profiles.approved` | Render one approved public-safe story | `surface=public`, projection allowlist, noindex on missing/revoked paths | `/404` |
+| `/robots.txt` | `public.home` | Publish crawler rules for protected and revoked paths | `surface=public` | `/` |
 | `/honoraries` | `public.honoraries` | View approved honorary entries | `surface=public`, `standing=good`, `visibility=public`, `consent=granted`, `approved=true` | `/404` |
 | `/memorials` | `public.memorials` | View approved memorial entries | `surface=public`, `standing=good`, `visibility=public`, `consent=granted`, `approved=true` | `/404` |
 | `/contact` | `public.contact` | View public contact information | `surface=public` | `/` |
@@ -44,7 +47,10 @@ This file is the source of truth for Phase 2 route generation, policy checks, ta
 | `/admin/standing` | `admin.standing.manage` | Manage standing | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
 | `/admin/public-review` | `admin.public-review.queue` | Review public profile queue | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
 | `/admin/public-review/approve` | `admin.public-review.queue` | Approve public render | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
+| `/api/admin/public-profiles/queue` | `admin.public-review.queue` | List public approval records by status | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
 | `/api/admin/public-profiles/{id}/approve` | `admin.public-review.queue` | Approve public profile publication request | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on`, `member_standing=good` | `/` |
+| `/api/admin/public-profiles/{id}/revoke` | `admin.public-review.queue` | Revoke public profile publication | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on`, `member_standing=good` | `/` |
+| `/api/admin/public-profiles/{id}/final-approve` | `admin.public-review.queue` | Complete honorary or memorial final approval | `role=chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on`, `member_standing=good` | `/` |
 | `/admin/audit` | `admin.audit.read` | Read audit logs | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
 | `/admin/support-notes` | `admin.support-notes.add` | Add support notes | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
 

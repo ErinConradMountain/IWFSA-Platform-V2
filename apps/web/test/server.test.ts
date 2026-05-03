@@ -327,6 +327,85 @@ test("public profile prototype resolves legacy asset without protected navigatio
   });
 });
 
+test("public gallery and story render approved projection without private fields", async () => {
+  const fetchImpl = async (input: string | URL | Request) => {
+    assert.match(String(input), /\/api\/public\/profiles/);
+    return new Response(JSON.stringify({
+      profiles: [
+        {
+          displayName: "Approved Member",
+          biography: "Public-safe story.",
+          updatedAt: "2026-05-03T10:00:00.000Z",
+          internal_id: "private-id",
+          consent_timestamp: "private",
+          review_notes: "private"
+        }
+      ]
+    }), {
+      status: 200,
+      headers: { "content-type": "application/json" }
+    });
+  };
+  const server = createWebServer({
+    serviceName: "web",
+    environment: "test",
+    startedAt: "now",
+    host: "127.0.0.1",
+    port: 0,
+    apiBaseUrl: "http://api.test",
+    localDevelopment: true,
+    allowRoleSelfSelection: true,
+    secureCookies: false,
+    sessionTtlMs: 1000,
+    persistenceTarget: "memory"
+  }, { fetchImpl: fetchImpl as typeof fetch });
+
+  await withServer(server, async (baseUrl) => {
+    const gallery = await fetch(`${baseUrl}/public/gallery`);
+    const galleryBody = await gallery.text();
+    assert.equal(gallery.status, 200);
+    assert.match(galleryBody, /Approved public stories/);
+    assert.match(galleryBody, /Approved Member/);
+    assert.doesNotMatch(galleryBody, /private-id|consent_timestamp|review_notes/);
+    assert.doesNotMatch(galleryBody, /href="\/admin|href="\/member/);
+
+    const story = await fetch(`${baseUrl}/public/story/1`);
+    const storyBody = await story.text();
+    assert.equal(story.status, 200);
+    assert.match(storyBody, /Approved Story/);
+    assert.doesNotMatch(storyBody, /private-id|consent_timestamp|review_notes/);
+
+    const missing = await fetch(`${baseUrl}/public/story/revoked`);
+    const missingBody = await missing.text();
+    assert.equal(missing.status, 404);
+    assert.match(missingBody, /noindex, follow/);
+  });
+});
+
+test("robots file blocks protected and revoked public paths", async () => {
+  const server = createWebServer({
+    serviceName: "web",
+    environment: "test",
+    startedAt: "now",
+    host: "127.0.0.1",
+    port: 0,
+    localDevelopment: true,
+    allowRoleSelfSelection: true,
+    secureCookies: false,
+    sessionTtlMs: 1000,
+    persistenceTarget: "memory"
+  });
+
+  await withServer(server, async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/robots.txt`);
+    const body = await response.text();
+    assert.equal(response.status, 200);
+    assert.match(body, /Disallow: \/admin\//);
+    assert.match(body, /Disallow: \/member\//);
+    assert.match(body, /Disallow: \/public\/story\/revoked/);
+  });
+});
+
 test("member session cannot access admin surface", async () => {
   await withApiAndWeb(async (baseUrl) => {
     const signInResponse = await fetch(`${baseUrl}/signin`, {

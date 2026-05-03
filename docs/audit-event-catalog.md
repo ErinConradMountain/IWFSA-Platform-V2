@@ -38,6 +38,8 @@ Audit events provide operational evidence for identity, consent, import, standin
 | `profile.publication_reviewed` | Admin records review without approval | `member_profile` | Same schema as publication request; no public render state change. |
 | `profile.publication_approved` | Admin approves the profile version for publication | `member_profile` | Requires admin/chief_admin, admin surface, audit trail, member standing re-check as `good`, and durable approval record update. |
 | `profile.publication_revoked` | Member or admin revokes public publication | `member_profile` | Resets effective public visibility to private/hidden and requires audit correlation plus persisted revocation timestamp. |
+| `profile.honorary_published` | Chief admin completes final approval for an honorary entry | `member_profile` | Emitted only after first admin approval; metadata uses redacted notes and the final approver correlation ID. |
+| `profile.memorial_published` | Chief admin completes final approval for a memorial entry | `member_profile` | Emitted only after first admin approval; metadata must avoid family/contact/private biographical PII. |
 | `EVENT_STATE_CHANGED` | Admin publishes, closes, or archives event | `event` | Metadata includes previous and new state. |
 | `RSVP_REGISTERED` | Eligible member registers within capacity | `event` | No raw member PII in metadata. |
 | `WAITLIST_JOINED` | Eligible member joins full event waitlist | `event` | Metadata includes state only. |

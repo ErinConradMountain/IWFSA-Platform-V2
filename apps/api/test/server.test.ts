@@ -8,6 +8,7 @@ import { evaluate, type PolicyInput } from "@iwfsa/common/policy";
 import { createInMemoryRepositories } from "@iwfsa/common/repositories";
 import { createInMemorySessionRepository } from "@iwfsa/common/session-repository";
 import { createEventRepositories } from "@iwfsa/common/events";
+import { createInMemoryPublicApprovalRepository } from "@iwfsa/common/public-approval-repository";
 import { createStandingRepositories, openMembershipYear } from "@iwfsa/common/standing";
 import { createAuditEventEmitter } from "@iwfsa/common/audit";
 import { createApiServer } from "../src/server.ts";
@@ -651,7 +652,7 @@ test("admin public profile approval requires good standing and emits publication
       },
       body: JSON.stringify({ memberStanding: "review" })
     });
-    assert.equal(reviewDenied.status, 403);
+    assert.equal(reviewDenied.status, 409);
 
     const approveCsrf = await getCsrf(baseUrl, admin.sessionCookie);
     const approved = await fetch(`${baseUrl}/api/admin/public-profiles/member-public-approval/approve`, {
@@ -683,6 +684,245 @@ test("admin public profile approval requires good standing and emits publication
   const approvalEvent = events.find((event) => event.action === "profile.publication_approved" && event.correlationId === "corr-public-approved");
   assert.ok(approvalEvent);
   assert.equal(approvalEvent.redactedMetadata.reviewNotes, "Approved after email [REDACTED] was removed.");
+});
+
+test("admin public queue lists pending reviews and revokes approved profiles with audit", async () => {
+  const auditRepository = createInMemoryAuditRepository();
+  const publicApprovalRepository = createInMemoryPublicApprovalRepository();
+  publicApprovalRepository.createReviewRequest({
+    id: "approval-queue",
+    profileId: "profile-queue",
+    memberId: "member-queue",
+    profileVersion: "profile-v1",
+    requestedAt: "2026-05-03T10:00:00.000Z",
+    correlationId: "corr-seed"
+  });
+  publicApprovalRepository.transitionApproval({
+    id: "approval-queue",
+    action: "approve",
+    actorId: "admin-seed",
+    correlationId: "corr-seed-approved",
+    now: "2026-05-03T10:05:00.000Z"
+  });
+
+  const server = createApiServer(createTestApiConfig(), {
+    sessionRepository: createInMemorySessionRepository(),
+    auditRepository,
+    publicApprovalRepository
+  });
+
+  await withServer(server, async (baseUrl) => {
+    const member = await createSession(baseUrl, "member", "queue.member");
+    const memberQueue = await fetch(`${baseUrl}/api/admin/public-profiles/queue`, {
+      headers: { cookie: member.sessionCookie }
+    });
+    assert.equal(memberQueue.status, 403);
+
+    const admin = await createSession(baseUrl, "admin", "queue.admin");
+    const queue = await fetch(`${baseUrl}/api/admin/public-profiles/queue?status=approved`, {
+      headers: { cookie: admin.sessionCookie }
+    });
+    const queueBody = (await queue.json()) as Record<string, any>;
+    assert.equal(queue.status, 200);
+    assert.equal(queueBody.records.length, 1);
+    assert.equal(queueBody.records[0].reviewNotesSanitized, undefined);
+
+    const revokeCsrf = await getCsrf(baseUrl, admin.sessionCookie);
+    const revoked = await fetch(`${baseUrl}/api/admin/public-profiles/profile-queue/revoke`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-csrf-token": revokeCsrf.csrfToken,
+        cookie: admin.sessionCookie,
+        "x-correlation-id": "corr-revoke-profile"
+      },
+      body: JSON.stringify({
+        approvalId: "approval-queue",
+        memberStanding: "good",
+        reviewNotes: "Revoke note with person@example.test"
+      })
+    });
+    const body = (await revoked.json()) as Record<string, unknown>;
+    assert.equal(revoked.status, 202);
+    assert.equal(body.publicationState, "revoked");
+    assert.equal(body.visibility, "hidden");
+  });
+
+  const event = auditRepository.list().find((candidate) => candidate.action === "profile.publication_revoked");
+  assert.ok(event);
+  assert.equal(event.redactedMetadata.reviewNotes, "Revoke note with [REDACTED]");
+});
+
+test("honorary dual approval requires chief admin final approval and emits honorary publish audit", async () => {
+  const auditRepository = createInMemoryAuditRepository();
+  const publicApprovalRepository = createInMemoryPublicApprovalRepository();
+  const server = createApiServer(createTestApiConfig(), {
+    sessionRepository: createInMemorySessionRepository(),
+    auditRepository,
+    publicApprovalRepository
+  });
+
+  await withServer(server, async (baseUrl) => {
+    const admin = await createSession(baseUrl, "admin", "honorary.admin");
+    const approveCsrf = await getCsrf(baseUrl, admin.sessionCookie);
+    const approved = await fetch(`${baseUrl}/api/admin/public-profiles/honorary-1/approve`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-csrf-token": approveCsrf.csrfToken,
+        cookie: admin.sessionCookie
+      },
+      body: JSON.stringify({
+        approvalId: "approval-honorary",
+        memberStanding: "good",
+        contentType: "honorary",
+        requiresDualApproval: true
+      })
+    });
+    assert.equal(approved.status, 202);
+
+    const adminFinalCsrf = await getCsrf(baseUrl, admin.sessionCookie);
+    const adminFinal = await fetch(`${baseUrl}/api/admin/public-profiles/honorary-1/final-approve`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-csrf-token": adminFinalCsrf.csrfToken,
+        cookie: admin.sessionCookie
+      },
+      body: JSON.stringify({ approvalId: "approval-honorary" })
+    });
+    assert.equal(adminFinal.status, 403);
+
+    const chief = await createSession(baseUrl, "chief_admin", "honorary.chief");
+    const chiefCsrf = await getCsrf(baseUrl, chief.sessionCookie);
+    const final = await fetch(`${baseUrl}/api/admin/public-profiles/honorary-1/final-approve`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-csrf-token": chiefCsrf.csrfToken,
+        cookie: chief.sessionCookie,
+        "x-correlation-id": "corr-honorary-final"
+      },
+      body: JSON.stringify({ approvalId: "approval-honorary" })
+    });
+    const body = (await final.json()) as Record<string, unknown>;
+    assert.equal(final.status, 202);
+    assert.equal(body.publicationState, "published");
+    assert.equal(body.contentType, "honorary");
+  });
+
+  assert.equal(auditRepository.list().filter((event) => event.action === "profile.honorary_published").length, 1);
+  assert.ok(auditRepository.list().some((event) => event.action === "profile.honorary_published" && event.actor === "honorary.chief"));
+});
+
+test("final approval rejects records without first admin approval", async () => {
+  const publicApprovalRepository = createInMemoryPublicApprovalRepository();
+  publicApprovalRepository.createReviewRequest({
+    id: "approval-no-admin",
+    profileId: "memorial-no-admin",
+    memberId: "member-no-admin",
+    profileVersion: "profile-v1",
+    requestedAt: "2026-05-03T11:00:00.000Z",
+    correlationId: "corr-no-admin",
+    contentType: "memorial",
+    requiresDualApproval: true
+  });
+  const server = createApiServer(createTestApiConfig(), {
+    sessionRepository: createInMemorySessionRepository(),
+    auditRepository: createInMemoryAuditRepository(),
+    publicApprovalRepository
+  });
+
+  await withServer(server, async (baseUrl) => {
+    const chief = await createSession(baseUrl, "chief_admin", "chief.no-admin");
+    const csrf = await getCsrf(baseUrl, chief.sessionCookie);
+    const response = await fetch(`${baseUrl}/api/admin/public-profiles/memorial-no-admin/final-approve`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-csrf-token": csrf.csrfToken,
+        cookie: chief.sessionCookie
+      },
+      body: JSON.stringify({ approvalId: "approval-no-admin" })
+    });
+    const body = (await response.json()) as Record<string, unknown>;
+    assert.equal(response.status, 409);
+    assert.equal(body.code, "ADMIN_APPROVAL_REQUIRED");
+  });
+});
+
+test("memorial dual approval emits memorial published audit exactly once", async () => {
+  const auditRepository = createInMemoryAuditRepository();
+  const server = createApiServer(createTestApiConfig(), {
+    sessionRepository: createInMemorySessionRepository(),
+    auditRepository,
+    publicApprovalRepository: createInMemoryPublicApprovalRepository()
+  });
+
+  await withServer(server, async (baseUrl) => {
+    const admin = await createSession(baseUrl, "admin", "memorial.admin");
+    const approveCsrf = await getCsrf(baseUrl, admin.sessionCookie);
+    await fetch(`${baseUrl}/api/admin/public-profiles/memorial-1/approve`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-csrf-token": approveCsrf.csrfToken, cookie: admin.sessionCookie },
+      body: JSON.stringify({ approvalId: "approval-memorial", memberStanding: "good", contentType: "memorial", requiresDualApproval: true })
+    });
+
+    const chief = await createSession(baseUrl, "chief_admin", "memorial.chief");
+    const finalCsrf = await getCsrf(baseUrl, chief.sessionCookie);
+    const final = await fetch(`${baseUrl}/api/admin/public-profiles/memorial-1/final-approve`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-csrf-token": finalCsrf.csrfToken,
+        cookie: chief.sessionCookie,
+        "x-correlation-id": "corr-memorial-final"
+      },
+      body: JSON.stringify({ approvalId: "approval-memorial" })
+    });
+    assert.equal(final.status, 202);
+  });
+
+  assert.equal(auditRepository.list().filter((event) => event.action === "profile.memorial_published").length, 1);
+  assert.ok(auditRepository.list().some((event) => event.action === "profile.memorial_published" && event.correlationId === "corr-memorial-final"));
+});
+
+test("revocation revalidates standing and returns conflict when standing changes", async () => {
+  const auditRepository = createInMemoryAuditRepository();
+  const publicApprovalRepository = createInMemoryPublicApprovalRepository();
+  publicApprovalRepository.createReviewRequest({
+    id: "approval-standing-conflict",
+    profileId: "profile-standing-conflict",
+    memberId: "member-standing-conflict",
+    profileVersion: "profile-v1",
+    requestedAt: "2026-05-03T11:00:00.000Z",
+    correlationId: "corr-standing-conflict"
+  });
+  publicApprovalRepository.transitionApproval({
+    id: "approval-standing-conflict",
+    action: "approve",
+    actorId: "admin-1",
+    correlationId: "corr-standing-conflict-approved",
+    now: "2026-05-03T11:05:00.000Z"
+  });
+  const server = createApiServer(createTestApiConfig(), {
+    sessionRepository: createInMemorySessionRepository(),
+    auditRepository,
+    publicApprovalRepository
+  });
+
+  await withServer(server, async (baseUrl) => {
+    const admin = await createSession(baseUrl, "admin", "standing-conflict.admin");
+    const csrf = await getCsrf(baseUrl, admin.sessionCookie);
+    const response = await fetch(`${baseUrl}/api/admin/public-profiles/profile-standing-conflict/revoke`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-csrf-token": csrf.csrfToken, cookie: admin.sessionCookie },
+      body: JSON.stringify({ approvalId: "approval-standing-conflict", memberStanding: "review" })
+    });
+    const body = (await response.json()) as Record<string, unknown>;
+    assert.equal(response.status, 409);
+    assert.equal(body.code, "standing_changed");
+  });
 });
 
 test("public profile endpoint applies cache isolation and public-safe projection", async () => {

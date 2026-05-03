@@ -192,9 +192,12 @@ Stores durable public profile publication review state.
 - `status`: `pending_review`, `approved`, `published`, or `revoked`.
 - `review_notes_sanitized`: markup-stripped, length-limited, PII-redacted review note.
 - `approved_at`, `revoked_at`: lifecycle timestamps.
+- `content_type`: `profile`, `honorary`, or `memorial`.
+- `requires_dual_approval`: true when honorary or memorial content requires chief admin final approval.
+- `final_approved_by`, `final_approved_at`: chief admin final approval evidence for dual-approval records.
 - `correlation_id`: request/audit correlation.
 
-Invariant: review notes are sanitized before persistence; pending requests cannot be revoked without first creating accountable approval/review context.
+Invariant: review notes are sanitized before persistence; pending requests cannot be revoked without first creating accountable approval/review context; honorary and memorial records cannot publish until final chief admin approval is recorded.
 
 ## Phase 5 State Transitions
 
@@ -220,4 +223,5 @@ Invariant: review notes are sanitized before persistence; pending requests canno
 ## Phase 8 State Transitions
 
 - Public approval: `pending_review -> approved -> published`; `approved|published -> revoked`.
+- Honorary/memorial approval: `pending_review -> approved -> published` requires first admin approval and final chief admin approval.
 - Public profile delivery: public reads use repository-level standing, visibility, consent, and approval predicates plus public-safe projection.

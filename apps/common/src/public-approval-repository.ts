@@ -1,4 +1,4 @@
-import type { PublicationAction, PublicationState } from "@iwfsa/common/public-approval";
+import type { PublicContentType, PublicationAction, PublicationState } from "@iwfsa/common/public-approval";
 import { sanitizeReviewNotes, transitionPublicationState } from "@iwfsa/common/public-approval";
 
 export type PublicApprovalRecord = {
@@ -13,6 +13,10 @@ export type PublicApprovalRecord = {
   approvedAt: string | null;
   revokedAt: string | null;
   correlationId: string;
+  contentType: PublicContentType;
+  requiresDualApproval: boolean;
+  finalApprovedBy: string | null;
+  finalApprovedAt: string | null;
 };
 
 export type CreateReviewRequestInput = {
@@ -22,6 +26,8 @@ export type CreateReviewRequestInput = {
   profileVersion: string;
   requestedAt: string;
   correlationId: string;
+  contentType?: PublicContentType;
+  requiresDualApproval?: boolean;
 };
 
 export type TransitionApprovalInput = {
@@ -37,7 +43,9 @@ export type PublicApprovalRepository = {
   createReviewRequest(input: CreateReviewRequestInput): PublicApprovalRecord;
   transitionApproval(input: TransitionApprovalInput): PublicApprovalRecord;
   getPendingReviews(): PublicApprovalRecord[];
+  listByStatus(status: PublicationState): PublicApprovalRecord[];
   revokeApproval(input: Omit<TransitionApprovalInput, "action">): PublicApprovalRecord;
+  finalApprove(input: Omit<TransitionApprovalInput, "action" | "reviewNotes">): PublicApprovalRecord;
   findById(id: string): PublicApprovalRecord | null;
 };
 
@@ -67,7 +75,11 @@ export function createInMemoryPublicApprovalRepository(): PublicApprovalReposito
         reviewNotesSanitized: "",
         approvedAt: null,
         revokedAt: null,
-        correlationId: input.correlationId
+        correlationId: input.correlationId,
+        contentType: input.contentType || "profile",
+        requiresDualApproval: Boolean(input.requiresDualApproval),
+        finalApprovedBy: null,
+        finalApprovedAt: null
       };
       records.set(record.id, record);
       return record;
@@ -102,8 +114,31 @@ export function createInMemoryPublicApprovalRepository(): PublicApprovalReposito
       return [...records.values()].filter((record) => record.status === "pending_review");
     },
 
+    listByStatus(status) {
+      return [...records.values()].filter((record) => record.status === status);
+    },
+
     revokeApproval(input) {
       return this.transitionApproval({ ...input, action: "revoke" });
+    },
+
+    finalApprove(input) {
+      const existing = records.get(input.id);
+      if (!existing) {
+        throw new Error("approval_record_missing");
+      }
+      if (existing.status !== "approved" || !existing.reviewedBy || existing.finalApprovedBy) {
+        throw new Error("invalid_publication_transition");
+      }
+      const next: PublicApprovalRecord = {
+        ...existing,
+        status: "published",
+        finalApprovedBy: input.actorId,
+        finalApprovedAt: input.now,
+        correlationId: input.correlationId
+      };
+      records.set(next.id, next);
+      return next;
     },
 
     findById(id) {
@@ -125,7 +160,11 @@ export function createPostgreSqlPublicApprovalRepository(client: PublicApprovalS
       reviewNotesSanitized: String(row.review_notes_sanitized ?? row.reviewNotesSanitized ?? ""),
       approvedAt: row.approved_at || row.approvedAt ? String(row.approved_at ?? row.approvedAt) : null,
       revokedAt: row.revoked_at || row.revokedAt ? String(row.revoked_at ?? row.revokedAt) : null,
-      correlationId: String(row.correlation_id ?? row.correlationId)
+      correlationId: String(row.correlation_id ?? row.correlationId),
+      contentType: String(row.content_type ?? row.contentType ?? "profile") as PublicContentType,
+      requiresDualApproval: Boolean(row.requires_dual_approval ?? row.requiresDualApproval),
+      finalApprovedBy: row.final_approved_by || row.finalApprovedBy ? String(row.final_approved_by ?? row.finalApprovedBy) : null,
+      finalApprovedAt: row.final_approved_at || row.finalApprovedAt ? String(row.final_approved_at ?? row.finalApprovedAt) : null
     };
   }
 
@@ -137,8 +176,8 @@ export function createPostgreSqlPublicApprovalRepository(client: PublicApprovalS
       }
 
       client.execute(
-        "insert into public_approval_record (id, profile_id, member_id, profile_version, requested_at, reviewed_by, status, review_notes_sanitized, approved_at, revoked_at, correlation_id) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)",
-        [input.id, input.profileId, input.memberId, input.profileVersion, input.requestedAt, null, "pending_review", "", null, null, input.correlationId]
+        "insert into public_approval_record (id, profile_id, member_id, profile_version, requested_at, reviewed_by, status, review_notes_sanitized, approved_at, revoked_at, correlation_id, content_type, requires_dual_approval, final_approved_by, final_approved_at) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)",
+        [input.id, input.profileId, input.memberId, input.profileVersion, input.requestedAt, null, "pending_review", "", null, null, input.correlationId, input.contentType || "profile", Boolean(input.requiresDualApproval), null, null]
       );
       return this.findById(input.id)!;
     },
@@ -165,15 +204,31 @@ export function createPostgreSqlPublicApprovalRepository(client: PublicApprovalS
     },
 
     getPendingReviews() {
-      return client.query<Record<string, unknown>>("select id, profile_id, member_id, profile_version, requested_at, reviewed_by, status, review_notes_sanitized, approved_at, revoked_at, correlation_id from public_approval_record where status = 'pending_review' order by requested_at asc", []).rows.map(fromRow);
+      return client.query<Record<string, unknown>>("select id, profile_id, member_id, profile_version, requested_at, reviewed_by, status, review_notes_sanitized, approved_at, revoked_at, correlation_id, content_type, requires_dual_approval, final_approved_by, final_approved_at from public_approval_record where status = 'pending_review' order by requested_at asc", []).rows.map(fromRow);
+    },
+
+    listByStatus(status) {
+      return client.query<Record<string, unknown>>("select id, profile_id, member_id, profile_version, requested_at, reviewed_by, status, review_notes_sanitized, approved_at, revoked_at, correlation_id, content_type, requires_dual_approval, final_approved_by, final_approved_at from public_approval_record where status = $1 order by requested_at asc", [status]).rows.map(fromRow);
     },
 
     revokeApproval(input) {
       return this.transitionApproval({ ...input, action: "revoke" });
     },
 
+    finalApprove(input) {
+      const existing = this.findById(input.id);
+      if (!existing) {
+        throw new Error("approval_record_missing");
+      }
+      if (existing.status !== "approved" || !existing.reviewedBy || existing.finalApprovedBy) {
+        throw new Error("invalid_publication_transition");
+      }
+      client.execute("update public_approval_record set status = 'published', final_approved_by = $1, final_approved_at = $2, correlation_id = $3 where id = $4", [input.actorId, input.now, input.correlationId, input.id]);
+      return this.findById(input.id)!;
+    },
+
     findById(id) {
-      const result = client.query<Record<string, unknown>>("select id, profile_id, member_id, profile_version, requested_at, reviewed_by, status, review_notes_sanitized, approved_at, revoked_at, correlation_id from public_approval_record where id = $1 limit 1", [id]);
+      const result = client.query<Record<string, unknown>>("select id, profile_id, member_id, profile_version, requested_at, reviewed_by, status, review_notes_sanitized, approved_at, revoked_at, correlation_id, content_type, requires_dual_approval, final_approved_by, final_approved_at from public_approval_record where id = $1 limit 1", [id]);
       return result.rows[0] ? fromRow(result.rows[0]) : null;
     }
   };

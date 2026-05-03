@@ -198,6 +198,22 @@ function renderPage(title: string, body: string): string {
 </html>`;
 }
 
+function renderPublicPage(title: string, body: string, robots = "index, follow"): string {
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="${escapeHtml(robots)}" />
+    <title>${escapeHtml(title)}</title>
+    <link rel="stylesheet" href="/brand.css" />
+  </head>
+  <body>
+    <main>${body}</main>
+  </body>
+</html>`;
+}
+
 function renderSurfaceNav(surface: NavSurface): string {
   const links: Record<NavSurface, Array<[string, string]>> = {
     public: [["/", "Home"], ["/signin", "Sign in"]],
@@ -251,6 +267,79 @@ function renderMemberProfilePublicationHint(): string {
     <strong id="member-profile-publication-hint-title">Public visibility review</strong>
     <p id="member-profile-publication-hint-copy">Your profile will only appear publicly when your standing is Good and a curator approves it. You retain full control and can withdraw visibility at any time.</p>
   </div>`;
+}
+
+type PublicProfileView = {
+  displayName: string;
+  biography: string;
+  updatedAt: string;
+};
+
+function projectPublicProfile(input: Record<string, unknown>): PublicProfileView {
+  return {
+    displayName: String(input.displayName || ""),
+    biography: String(input.biography || ""),
+    updatedAt: String(input.updatedAt || "")
+  };
+}
+
+async function fetchPublicProfiles(config: ServiceConfig, fetchImpl: typeof fetch, limit = 25): Promise<PublicProfileView[]> {
+  const response = await fetchImpl(`${getApiBaseUrl(config)}/api/public/profiles?limit=${limit}`, {
+    headers: {
+      accept: "application/json"
+    }
+  });
+  if (!response.ok) {
+    return [];
+  }
+  const body = (await response.json()) as { profiles?: Array<Record<string, unknown>> };
+  return (body.profiles || []).map(projectPublicProfile);
+}
+
+function renderPublicGallery(profiles: PublicProfileView[]): string {
+  const cards = profiles.map((profile, index) => `<article class="visibility-public" data-public-story="${index + 1}">
+    <h2>${escapeHtml(profile.displayName)}</h2>
+    <p>${escapeHtml(profile.biography)}</p>
+    <p class="audit-preview">Updated ${escapeHtml(profile.updatedAt)}</p>
+    <a href="/public/story/${index + 1}">Read story</a>
+  </article>`).join("");
+
+  return renderPublicPage(
+    "Public Gallery",
+    `<section class="shell" data-route-surface="public">
+      <div class="eyebrow">Public Gallery</div>
+      <h1>Approved public stories</h1>
+      <p>Only approved public-safe profile fields are rendered here.</p>
+      ${cards || "<p>No approved public stories are available.</p>"}
+      ${renderSurfaceNav("public")}
+    </section>`
+  );
+}
+
+function renderPublicStory(profile: PublicProfileView | null): string {
+  if (!profile) {
+    return renderPublicPage(
+      "Story unavailable",
+      `<section class="shell" data-route-surface="public">
+        <div class="eyebrow">Public Story</div>
+        <h1>Story unavailable</h1>
+        <p>This story is unavailable or no longer published.</p>
+        ${renderSurfaceNav("public")}
+      </section>`,
+      "noindex, follow"
+    );
+  }
+
+  return renderPublicPage(
+    profile.displayName,
+    `<article class="shell visibility-public" data-route-surface="public">
+      <div class="eyebrow">Approved Story</div>
+      <h1>${escapeHtml(profile.displayName)}</h1>
+      <p>${escapeHtml(profile.biography)}</p>
+      <p class="audit-preview">Updated ${escapeHtml(profile.updatedAt)}</p>
+      ${renderSurfaceNav("public")}
+    </article>`
+  );
 }
 
 function routeAllowed(authContext: WebAuthSession, surface: Surface, task: TaskId, auditTrail = false): { allowed: boolean; fallback: string } {
@@ -351,6 +440,7 @@ async function loadAuthContext(url: URL, request: http.IncomingMessage, config: 
 
 export function createWebServer(config: ServiceConfig, dependencies: WebDependencies = {}): http.Server {
   const authGateway = dependencies.authGateway || createApiAuthGateway(config, dependencies);
+  const fetchImpl = dependencies.fetchImpl || fetch;
 
   return http.createServer(async (request, response) => {
     const url = new URL(request.url || "/", `http://${request.headers.host || "localhost"}`);
@@ -367,6 +457,15 @@ export function createWebServer(config: ServiceConfig, dependencies: WebDependen
         "cache-control": "public, max-age=300"
       });
       response.end(renderBrandCss());
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/robots.txt") {
+      response.writeHead(200, {
+        "content-type": "text/plain; charset=utf-8",
+        "cache-control": "public, max-age=300"
+      });
+      response.end("User-agent: *\nDisallow: /admin/\nDisallow: /member/\nDisallow: /public/story/revoked\n");
       return;
     }
 
@@ -421,6 +520,19 @@ export function createWebServer(config: ServiceConfig, dependencies: WebDependen
           primaryAction: { href: "/signin", label: "Sign in" }
         })
       );
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/public/gallery") {
+      sendHtml(response, 200, renderPublicGallery(await fetchPublicProfiles(config, fetchImpl)));
+      return;
+    }
+
+    const storyMatch = url.pathname.match(/^\/public\/story\/([^/]+)$/);
+    if (request.method === "GET" && storyMatch) {
+      const profiles = await fetchPublicProfiles(config, fetchImpl);
+      const index = Number.parseInt(storyMatch[1], 10) - 1;
+      sendHtml(response, profiles[index] ? 200 : 404, renderPublicStory(profiles[index] || null));
       return;
     }
 

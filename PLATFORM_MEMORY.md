@@ -27,6 +27,7 @@ These constraints are active platform memory and apply to every future phase.
 - Baseline commit `2d44fb8` carries `phase7-complete` and `phase8-kickoff-repository-enforcement`; approval spine commit `086fac1` added RBAC, standing re-validation, PII-redacted review notes, and publication audit events.
 - Current Phase 8 public delivery adds durable `public_approval_record` persistence, public cache-isolated `GET /api/public/profiles`, provenance CI checks, and 55+ expected tests once merged.
 - Audit event schema confirmed for `profile.publication_requested`, `profile.publication_reviewed`, `profile.publication_approved`, and `profile.publication_revoked`.
+- Phase 8 sign-off slice adds admin queue/revoke/final-approve lifecycle endpoints, public gallery/story SSR projection, robots isolation, and dual approval for honorary/memorial publication with `profile.honorary_published` and `profile.memorial_published`.
 
 ## Current Seed Strategy
 
