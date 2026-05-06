@@ -849,6 +849,152 @@ test("admin broadcast preview evaluates audience without writing outbox rows", a
   assert.ok(auditRepository.list().some((event) => event.action === "notification.broadcast_previewed" && event.redactedMetadata.targetCount === 1));
 });
 
+test("admin clean-slate endpoint is CSRF protected and audited", async () => {
+  const auditRepository = createInMemoryAuditRepository();
+  const server = createApiServer(createTestApiConfig(), {
+    sessionRepository: createInMemorySessionRepository(),
+    auditRepository
+  });
+
+  await withServer(server, async (baseUrl) => {
+    const admin = await createSession(baseUrl, "admin", "akeida");
+    const blocked = await fetch(`${baseUrl}/api/admin/members/clean-slate`, {
+      method: "POST",
+      headers: {
+        cookie: admin.sessionCookie
+      }
+    });
+    assert.equal(blocked.status, 403);
+
+    const csrf = await getCsrf(baseUrl, admin.sessionCookie);
+    const accepted = await fetch(`${baseUrl}/api/admin/members/clean-slate`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-csrf-token": csrf.csrfToken,
+        cookie: csrf.cookie
+      },
+      body: JSON.stringify({ confirmation: "clear-temporary-seed-members" })
+    });
+    const body = (await accepted.json()) as Record<string, unknown>;
+
+    assert.equal(accepted.status, 202);
+    assert.equal(body.status, "accepted");
+    assert.ok(auditRepository.list().some((event) => event.action === "SEED_MEMBERS_CLEAN_SLATE"));
+  });
+});
+
+test("admin member CRUD endpoints create update and delete temporary records", async () => {
+  const auditRepository = createInMemoryAuditRepository();
+  const server = createApiServer(createTestApiConfig(), {
+    sessionRepository: createInMemorySessionRepository(),
+    auditRepository
+  });
+
+  await withServer(server, async (baseUrl) => {
+    const admin = await createSession(baseUrl, "admin", "member.admin");
+    let csrf = await getCsrf(baseUrl, admin.sessionCookie);
+    const created = await fetch(`${baseUrl}/api/admin/members`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-csrf-token": csrf.csrfToken, cookie: csrf.cookie },
+      body: JSON.stringify({ displayName: "Test Member", roleTitle: "Director", organisation: "IWFSA Test", status: "Active" })
+    });
+    const createdBody = (await created.json()) as { member: { id: string } };
+    assert.equal(created.status, 201);
+
+    csrf = await getCsrf(baseUrl, admin.sessionCookie);
+    const updated = await fetch(`${baseUrl}/api/admin/members/${createdBody.member.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json", "x-csrf-token": csrf.csrfToken, cookie: csrf.cookie },
+      body: JSON.stringify({ displayName: "Updated Member", status: "Suspended" })
+    });
+    assert.equal(updated.status, 202);
+
+    csrf = await getCsrf(baseUrl, admin.sessionCookie);
+    const deleted = await fetch(`${baseUrl}/api/admin/members/${createdBody.member.id}`, {
+      method: "DELETE",
+      headers: { "x-csrf-token": csrf.csrfToken, cookie: csrf.cookie }
+    });
+    assert.equal(deleted.status, 202);
+    assert.ok(auditRepository.list().some((event) => event.action === "ADMIN_MEMBER_CREATED"));
+    assert.ok(auditRepository.list().some((event) => event.action === "ADMIN_MEMBER_UPDATED"));
+    assert.ok(auditRepository.list().some((event) => event.action === "ADMIN_MEMBER_DELETED"));
+  });
+});
+
+test("admin event CRUD endpoints create update and delete temporary records", async () => {
+  const auditRepository = createInMemoryAuditRepository();
+  const server = createApiServer(createTestApiConfig(), {
+    sessionRepository: createInMemorySessionRepository(),
+    auditRepository
+  });
+
+  await withServer(server, async (baseUrl) => {
+    const admin = await createSession(baseUrl, "admin", "event.admin");
+    let csrf = await getCsrf(baseUrl, admin.sessionCookie);
+    const created = await fetch(`${baseUrl}/api/admin/events`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-csrf-token": csrf.csrfToken, cookie: csrf.cookie },
+      body: JSON.stringify({ title: "Leadership Roundtable", maxCapacity: 25 })
+    });
+    const createdBody = (await created.json()) as { event: { id: string } };
+    assert.equal(created.status, 201);
+
+    csrf = await getCsrf(baseUrl, admin.sessionCookie);
+    const updated = await fetch(`${baseUrl}/api/admin/events/${createdBody.event.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json", "x-csrf-token": csrf.csrfToken, cookie: csrf.cookie },
+      body: JSON.stringify({ title: "Updated Roundtable", maxCapacity: 35 })
+    });
+    assert.equal(updated.status, 202);
+
+    csrf = await getCsrf(baseUrl, admin.sessionCookie);
+    const deleted = await fetch(`${baseUrl}/api/admin/events/${createdBody.event.id}`, {
+      method: "DELETE",
+      headers: { "x-csrf-token": csrf.csrfToken, cookie: csrf.cookie }
+    });
+    assert.equal(deleted.status, 202);
+    assert.ok(auditRepository.list().some((event) => event.action === "ADMIN_EVENT_CREATED"));
+    assert.ok(auditRepository.list().some((event) => event.action === "ADMIN_EVENT_UPDATED"));
+    assert.ok(auditRepository.list().some((event) => event.action === "ADMIN_EVENT_DELETED"));
+  });
+});
+
+test("admin member and event CRUD rejects bad data and non-admin access", async () => {
+  const server = createApiServer(createTestApiConfig(), {
+    sessionRepository: createInMemorySessionRepository(),
+    auditRepository: createInMemoryAuditRepository()
+  });
+
+  await withServer(server, async (baseUrl) => {
+    const member = await createSession(baseUrl, "member", "ordinary.member");
+    let csrf = await getCsrf(baseUrl, member.sessionCookie);
+    const denied = await fetch(`${baseUrl}/api/admin/members`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-csrf-token": csrf.csrfToken, cookie: csrf.cookie },
+      body: JSON.stringify({ displayName: "Should Not Create" })
+    });
+    assert.equal(denied.status, 403);
+
+    const admin = await createSession(baseUrl, "admin", "validation.admin");
+    csrf = await getCsrf(baseUrl, admin.sessionCookie);
+    const badMember = await fetch(`${baseUrl}/api/admin/members`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-csrf-token": csrf.csrfToken, cookie: csrf.cookie },
+      body: JSON.stringify({ displayName: "" })
+    });
+    assert.equal(badMember.status, 400);
+
+    csrf = await getCsrf(baseUrl, admin.sessionCookie);
+    const badEvent = await fetch(`${baseUrl}/api/admin/events`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-csrf-token": csrf.csrfToken, cookie: csrf.cookie },
+      body: JSON.stringify({ title: "" })
+    });
+    assert.equal(badEvent.status, 400);
+  });
+});
+
 test("member role cannot preview admin notification broadcast", async () => {
   const auditRepository = createInMemoryAuditRepository();
   const server = createApiServer(createTestApiConfig(), {

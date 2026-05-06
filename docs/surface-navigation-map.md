@@ -40,31 +40,36 @@ This file is the source of truth for Phase 2 route generation, policy checks, ta
 | Route | Task ID | Allowed Task | Required Policy Inputs | Fallback |
 | --- | --- | --- | --- | --- |
 | `/admin` | `admin.dashboard` | View admin dashboard | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
+| `/admin/members` | `admin.members.manage` | Manage temporary member records | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
+| `/admin/members/{id}/edit` | `admin.members.manage` | Edit temporary member record | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
+| `/admin/members/{id}/delete` | `admin.members.manage` | Delete temporary member record | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
+| `/api/admin/members` | `admin.members.manage` | List or create temporary member records | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on`, CSRF token for create | `/` |
+| `/api/admin/members/{id}` | `admin.members.manage` | Update or delete temporary member records | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on`, CSRF token | `/` |
 | `/admin/imports` | `admin.import.preview` | Import preview | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
 | `/admin/import/preview` | `admin.import.preview` | Review import preview | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
 | `/admin/import/resolve-duplicate` | `admin.import.preview` | Resolve duplicate row | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
 | `/admin/import/commit` | `admin.import.commit` | Commit reviewed import | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
 | `/admin/imports` | `admin.import.commit` | Import commit | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
 | `/admin/standing` | `admin.standing.manage` | Manage standing | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
-| `/admin/public-review` | `admin.public-review.queue` | Review public profile queue | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
-| `/admin/public-review/approve` | `admin.public-review.queue` | Approve public render | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
-| `/api/admin/public-profiles/queue` | `admin.public-review.queue` | List public approval records by status | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
-| `/api/admin/public-profiles/{id}/approve` | `admin.public-review.queue` | Approve public profile publication request | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on`, `member_standing=good` | `/` |
-| `/api/admin/public-profiles/{id}/revoke` | `admin.public-review.queue` | Revoke public profile publication | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on`, `member_standing=good` | `/` |
-| `/api/admin/public-profiles/{id}/final-approve` | `admin.public-review.queue` | Complete honorary or memorial final approval | `role=chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on`, `member_standing=good` | `/` |
-| `/api/admin/notifications/broadcast/preview` | `admin.notifications.broadcast` | Preview eligible notification broadcast audience without enqueueing | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on`, CSRF token | `/` |
-| `/admin/audit` | `admin.audit.read` | Read audit logs | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
-| `/admin/support-notes` | `admin.support-notes.add` | Add support notes | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
+| `/admin/members/clean-slate` | `admin.members.clean_slate` | Clear temporary seed members before production setup | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
+| `/api/admin/members/clean-slate` | `admin.members.clean_slate` | Execute temporary seed member cleanup | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on`, CSRF token | `/` |
+| `/admin/events` | `admin.events.manage` | Manage temporary event records | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
+| `/admin/events/{id}/edit` | `admin.events.manage` | Edit temporary event record | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
+| `/admin/events/{id}/delete` | `admin.events.manage` | Delete temporary event record | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
+| `/api/admin/events` | `admin.events.manage` | List or create temporary event records | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on`, CSRF token for create | `/` |
+| `/api/admin/events/{id}` | `admin.events.manage` | Update or delete temporary event records | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on`, CSRF token | `/` |
+| `/api/admin/events/{id}/state` | `admin.events.manage` | Change temporary event lifecycle state | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on`, CSRF token | `/` |
 
 ## Missing Mapping Rule
 
-If a requested route or task is not listed here, the API must return `403` with `POLICY_MISSING_MAPPING` and emit `POLICY_DENY`. The web surface must redirect to the surface-safe fallback without exposing whether the restricted route exists.
+If a requested route, privileged task, state-changing API handler, form, or workflow is not represented in this map, implementation must stop before adding business logic. The route must return or follow `POLICY_MISSING_MAPPING` behavior through the policy layer, use a surface-safe fallback, and record the unresolved mapping in `decision-log.md` before the route is added to this document.
 
 ## UX Contract
 
-- Each mapped page has one primary task.
-- Member dashboard primary CTA: Complete profile.
-- Admin dashboard primary CTA: Review imports.
-- Public homepage primary CTA: Sign in.
-- Secondary choices must be represented through surface navigation, not competing primary buttons.
-- No route may show navigation links from another protected surface.
+- Every page represented here must have one primary task and no more than one `data-primary-action`.
+- Public navigation may expose public routes only.
+- Member navigation may expose member routes only.
+- Admin navigation may expose admin routes only.
+- Member pages must not render admin controls, even when an admin-capable user is allowed to view a member surface for support.
+- Admin pages must use stewardship language and audit-aware controls, not member self-service styling.
+- Page styling must use design tokens from `apps/common/src/design-tokens.ts`; hard-coded UI colors and inline style attributes are not allowed in route rendering.

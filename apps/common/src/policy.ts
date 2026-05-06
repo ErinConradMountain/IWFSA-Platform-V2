@@ -19,9 +19,11 @@ export type TaskId =
   | "member.directory.view"
   | "member.notifications.view"
   | "admin.dashboard"
+  | "admin.members.manage"
   | "admin.import.preview"
   | "admin.import.commit"
   | "admin.standing.manage"
+  | "admin.members.clean_slate"
   | "admin.events.manage"
   | "admin.public-review.queue"
   | "admin.notifications.broadcast"
@@ -59,9 +61,11 @@ export const SURFACE_TASK_MATRIX: Record<TaskId, { surface: Surface; fallback: s
   "member.directory.view": { surface: "member", fallback: "/member/consent-required", requiresConsent: true },
   "member.notifications.view": { surface: "member", fallback: "/member/dashboard" },
   "admin.dashboard": { surface: "admin", fallback: "/admin" },
+  "admin.members.manage": { surface: "admin", fallback: "/admin" },
   "admin.import.preview": { surface: "admin", fallback: "/admin" },
   "admin.import.commit": { surface: "admin", fallback: "/admin" },
   "admin.standing.manage": { surface: "admin", fallback: "/admin" },
+  "admin.members.clean_slate": { surface: "admin", fallback: "/admin" },
   "admin.events.manage": { surface: "admin", fallback: "/admin" },
   "admin.public-review.queue": { surface: "admin", fallback: "/admin" },
   "admin.notifications.broadcast": { surface: "admin", fallback: "/admin" },

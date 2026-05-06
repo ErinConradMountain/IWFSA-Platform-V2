@@ -4,6 +4,8 @@
 
 The IWFSA Platform V2 design system creates a calm, dignified, privacy-aware experience across public, member, and admin surfaces. Design is a governance control: every interface must preserve member control, prevent accidental private-to-public leakage, and support auditability.
 
+For designer-facing page expectations, use `docs/designer-custom-instructions.md`, `docs/designer-page-handoff-checklist.md`, and `docs/member-section-visual-design-brief.md`. These documents describe the intended look, typography, color usage, page comfort, and member/admin visual separation for future working pages.
+
 ## Token Source
 
 Design tokens live in `apps/common/src/design-tokens.ts`.
@@ -89,3 +91,28 @@ Joy is implemented through restraint:
 - clear audit confirmations,
 - subtle motion tokens,
 - legacy visual assets used only where public-safe.
+
+## V1 Visual Seed Usage
+
+V2 may use approved V1 visual seed assets to improve warmth and continuity, but only through `/legacy-assets/{filename}` and only as public-safe presentation assets.
+
+Current approved usage:
+
+- Landing page hero: V1 public home composition with `iwfsa-home.jpg`, the SVG logo, a prominent mission statement, warm background, dark hero panel, and the `Leading with Purpose.` headline.
+- Sign-in page: V1 public sign-in stage over the `iwfsa-home.jpg` background, with V2 session and policy logic preserved.
+- Shared page shell: brand logo and approved portrait stack as decorative visual context.
+- Public gallery and story pages: approved portrait assets paired with public-safe profile projections.
+- Member/admin working pages: `Webpages` page sheets are design references only; production route shells must use `apps/common/src/design-tokens.ts`, surface-scoped navigation, one primary action, policy checks, CSRF for mutations, and audit-aware copy.
+
+These assets must not imply publication consent for real member records. They remain illustrative seed assets until the approval and consent workflows connect to production records.
+
+## Design Handoff Integration
+
+The current build plan for turning the `Webpages` handoff pack into application surfaces lives in `docs/design-handoff-integration-plan.md`.
+
+Rules:
+
+- JSX preview files in `Webpages` are not production components.
+- Page sheets are acceptance references for routes, states, privacy, audit, mobile, and accessibility.
+- Production routes must be verified against `docs/surface-navigation-map.md` before implementation.
+- Demo-only state panels must stay out of live member/admin pages unless explicitly isolated in a review environment.

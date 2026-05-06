@@ -1,34 +1,51 @@
 {
-  "source": "V1 visual seed assets",
-  "privacy": "No real contact details or private member records. Display names are seed-only placeholders derived from legacy asset filenames.",
+  "source": "V1 members fixture for temporary V2 testing",
+  "privacy": "Seed-only fixture data from V1 docs/imports/members-fixture.xlsx. Uses example.com addresses and must not be treated as production member records.",
+  "credentialPolicy": "Temporary local preview accepts listed test identifiers with the shared V1 test password hash in the web server. Do not use for production authentication.",
   "members": [
     {
-      "seedId": "seed-ayanda",
-      "displayName": "Ayanda",
+      "seedId": "seed-ava-naidoo",
+      "displayName": "Ava Naidoo",
       "publicImage": "/legacy-assets/member-portrait-ayanda.svg",
-      "visibility": "public",
-      "approved": true
+      "visibility": "member_only",
+      "approved": false,
+      "status": "Active",
+      "organisation": "Marula Advisory",
+      "roleTitle": "Board Member",
+      "testIdentifiers": ["ava.naidoo"]
     },
     {
-      "seedId": "seed-lerato",
-      "displayName": "Lerato",
+      "seedId": "seed-naledi-khumalo",
+      "displayName": "Naledi Khumalo",
       "publicImage": "/legacy-assets/member-portrait-lerato.svg",
-      "visibility": "public",
-      "approved": true
+      "visibility": "member_only",
+      "approved": false,
+      "status": "Active",
+      "organisation": "Khumalo Advisory",
+      "roleTitle": "Member",
+      "testIdentifiers": ["naledi.k", "naledi.khumalo"]
     },
     {
-      "seedId": "seed-nomsa",
-      "displayName": "Nomsa",
+      "seedId": "seed-nomsa-dlamini",
+      "displayName": "Nomsa Dlamini",
       "publicImage": "/legacy-assets/member-portrait-nomsa.svg",
-      "visibility": "public",
-      "approved": true
+      "visibility": "member_only",
+      "approved": false,
+      "status": "Active",
+      "organisation": "IWFSA",
+      "roleTitle": "Member",
+      "testIdentifiers": ["nomsa", "nomsa.dlamini"]
     },
     {
-      "seedId": "seed-zara",
-      "displayName": "Zara",
+      "seedId": "seed-zara-mokoena",
+      "displayName": "Zara Mokoena",
       "publicImage": "/legacy-assets/member-portrait-zara.svg",
-      "visibility": "public",
-      "approved": true
+      "visibility": "member_only",
+      "approved": false,
+      "status": "Suspended",
+      "organisation": "Mokoena Consulting",
+      "roleTitle": "Member",
+      "testIdentifiers": ["zara.mokoena"]
     }
   ]
 }

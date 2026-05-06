@@ -2,6 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import type http from "node:http";
 
+import { createInMemoryAuditRepository } from "@iwfsa/common/audit";
+import { createInMemorySessionRepository } from "@iwfsa/common/session-repository";
+import { createApiServer } from "../../api/src/server.ts";
 import { createWebServer } from "../src/server.ts";
 
 async function withServer(server: http.Server, callback: (baseUrl: string) => Promise<void>): Promise<void> {
@@ -94,7 +97,52 @@ async function withApiAndWeb(callback: (baseUrl: string) => Promise<void>): Prom
   }
 }
 
-test("web public shell renders rebuild heading", async () => {
+async function withRealApiAndWeb(callback: (baseUrl: string) => Promise<void>): Promise<void> {
+  const apiServer = createApiServer({
+    serviceName: "api",
+    environment: "test",
+    startedAt: "now",
+    host: "127.0.0.1",
+    port: 0,
+    allowRoleSelfSelection: true,
+    localDevelopment: true,
+    secureCookies: false,
+    sessionTtlMs: 30 * 60 * 1000,
+    persistenceTarget: "memory"
+  }, {
+    sessionRepository: createInMemorySessionRepository(),
+    auditRepository: createInMemoryAuditRepository()
+  });
+  await new Promise<void>((resolve) => apiServer.listen(0, "127.0.0.1", resolve));
+  const apiAddress = apiServer.address();
+  assert.ok(apiAddress && typeof apiAddress === "object");
+
+  const webServer = createWebServer({
+    serviceName: "web",
+    environment: "test",
+    startedAt: "now",
+    host: "127.0.0.1",
+    port: 0,
+    apiBaseUrl: `http://127.0.0.1:${apiAddress.port}`,
+    allowRoleSelfSelection: true,
+    localDevelopment: true,
+    secureCookies: false,
+    sessionTtlMs: 30 * 60 * 1000,
+    persistenceTarget: "memory"
+  });
+  await new Promise<void>((resolve) => webServer.listen(0, "127.0.0.1", resolve));
+  const webAddress = webServer.address();
+  assert.ok(webAddress && typeof webAddress === "object");
+
+  try {
+    await callback(`http://127.0.0.1:${webAddress.port}`);
+  } finally {
+    await new Promise<void>((resolve, reject) => webServer.close((error) => (error ? reject(error) : resolve())));
+    await new Promise<void>((resolve, reject) => apiServer.close((error) => (error ? reject(error) : resolve())));
+  }
+}
+
+test("web public landing renders V1 home visual entrance", async () => {
   const server = createWebServer({
     serviceName: "web",
     environment: "test",
@@ -113,7 +161,16 @@ test("web public shell renders rebuild heading", async () => {
     const body = await response.text();
 
     assert.equal(response.status, 200);
-    assert.match(body, /IWFSA Platform V2 rebuild scaffold/);
+    assert.match(body, /Leading with Purpose\./);
+    assert.match(body, /\/legacy-assets\/iwfsa-home.jpg/);
+    assert.match(body, /\/legacy-assets\/iwfsa-logo.svg/);
+    assert.match(body, /data-primary-action="true"/);
+    assert.equal((body.match(/data-primary-action="true"/g) || []).length, 1);
+    assert.match(body, /A professional home for accomplished women/);
+    assert.match(body, /strengthens ethical leadership and meaningful impact/);
+    assert.doesNotMatch(body, /View approved stories/);
+    assert.doesNotMatch(body, />Home<\/a>/);
+    assert.doesNotMatch(body, /Purposeful programmes|Mentoring and connection/);
   });
 });
 
@@ -136,6 +193,78 @@ test("chief_admin sign-in redirects to admin route", async () => {
   });
 });
 
+test("sign-in page presents identity-based access with visual assets", async () => {
+  await withApiAndWeb(async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/signin`);
+    const body = await response.text();
+    const css = await (await fetch(`${baseUrl}/brand.css`)).text();
+
+    assert.equal(response.status, 200);
+    assert.match(body, /Member Access/);
+    assert.match(body, /Portal Access/);
+    assert.match(body, /Username/);
+    assert.match(body, /Password/);
+    assert.match(body, /type="text"/);
+    assert.match(body, /data-primary-action="true">Sign in/);
+    assert.match(css, /\/legacy-assets\/iwfsa-home.jpg/);
+    assert.match(body, /\/legacy-assets\/iwfsa-logo.svg/);
+    assert.doesNotMatch(body, /<select name="role">/);
+    assert.doesNotMatch(body, /Establish session/);
+    assert.equal((body.match(/data-primary-action="true"/g) || []).length, 1);
+  });
+});
+
+test("local sign-in accepts V1 test credentials for member and admin access", async () => {
+  await withApiAndWeb(async (baseUrl) => {
+    const memberResponse = await fetch(`${baseUrl}/signin`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded"
+      },
+      body: new URLSearchParams({
+        subject: "naledi.k",
+        accessCode: "1possibility"
+      }),
+      redirect: "manual"
+    });
+    const adminResponse = await fetch(`${baseUrl}/signin`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded"
+      },
+      body: new URLSearchParams({
+        subject: "akeida",
+        accessCode: "1possibility"
+      }),
+      redirect: "manual"
+    });
+
+    assert.equal(memberResponse.status, 303);
+    assert.equal(memberResponse.headers.get("location"), "/member/dashboard");
+    assert.equal(adminResponse.status, 303);
+    assert.equal(adminResponse.headers.get("location"), "/admin");
+  });
+});
+
+test("local sign-in rejects unknown V1 test credentials", async () => {
+  await withApiAndWeb(async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/signin`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded"
+      },
+      body: new URLSearchParams({
+        subject: "naledi.k",
+        accessCode: "wrong-password"
+      })
+    });
+    const body = await response.text();
+
+    assert.equal(response.status, 400);
+    assert.match(body, /username or password could not be verified/i);
+  });
+});
+
 test("successful sign-in creates session and member redirects to member route", async () => {
   await withApiAndWeb(async (baseUrl) => {
     const response = await fetch(`${baseUrl}/signin`, {
@@ -153,6 +282,7 @@ test("successful sign-in creates session and member redirects to member route", 
     assert.equal(response.status, 303);
     assert.equal(response.headers.get("location"), "/member/dashboard");
     assert.match(response.headers.get("set-cookie") || "", /iwfsa_session=/);
+    assert.equal((response.headers.get("set-cookie") || "").match(/iwfsa_session=/g)?.length, 1);
   });
 });
 
@@ -175,7 +305,7 @@ test("invalid role submission is rejected", async () => {
   });
 });
 
-test("web member placeholder renders for authenticated session cookie", async () => {
+test("web member dashboard renders integrated design handoff for authenticated session cookie", async () => {
   await withApiAndWeb(async (baseUrl) => {
     const signInResponse = await fetch(`${baseUrl}/signin`, {
       method: "POST",
@@ -198,7 +328,9 @@ test("web member placeholder renders for authenticated session cookie", async ()
     const body = await response.text();
 
     assert.equal(response.status, 200);
-    assert.match(body, /Member portal placeholder/);
+    assert.match(body, /Member workspace/);
+    assert.match(body, /Today's member priorities/);
+    assert.match(body, /Consent scoped/);
     assert.match(body, /data-primary-action="true"/);
     assert.match(body, /Complete profile/);
     assert.doesNotMatch(body, /\/admin/);
@@ -267,6 +399,61 @@ test("member publication hint is isolated from public and admin surfaces", async
   });
 });
 
+test("member directory notifications consent and standing pages render governed design states", async () => {
+  await withApiAndWeb(async (baseUrl) => {
+    const signInResponse = await fetch(`${baseUrl}/signin`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded"
+      },
+      body: new URLSearchParams({
+        role: "member",
+        subject: "design.member"
+      }),
+      redirect: "manual"
+    });
+    const sessionCookie = signInResponse.headers.get("set-cookie");
+
+    const directory = await fetch(`${baseUrl}/member/directory`, {
+      headers: { cookie: sessionCookie || "" }
+    });
+    const directoryBody = await directory.text();
+    assert.equal(directory.status, 200);
+    assert.match(directoryBody, /Consent-scoped directory/);
+    assert.match(directoryBody, /Search visible profiles/);
+    assert.match(directoryBody, /Private email, phone, physical address/);
+    assert.doesNotMatch(directoryBody, /href="\/admin/);
+
+    const notifications = await fetch(`${baseUrl}/member/notifications`, {
+      headers: { cookie: sessionCookie || "" }
+    });
+    const notificationsBody = await notifications.text();
+    assert.equal(notifications.status, 200);
+    assert.match(notificationsBody, /Member notifications/);
+    assert.match(notificationsBody, /In-app active/);
+    assert.match(notificationsBody, /SMS future/);
+    assert.equal((notificationsBody.match(/data-primary-action="true"/g) || []).length, 1);
+
+    const consent = await fetch(`${baseUrl}/member/consent-required`, {
+      headers: { cookie: sessionCookie || "" }
+    });
+    const consentBody = await consent.text();
+    assert.equal(consent.status, 200);
+    assert.match(consentBody, /Consent required/);
+    assert.match(consentBody, /Protected feature content remains hidden/);
+    assert.match(consentBody, /Review consent/);
+
+    const standing = await fetch(`${baseUrl}/member/standing`, {
+      headers: { cookie: sessionCookie || "" }
+    });
+    const standingBody = await standing.text();
+    assert.equal(standing.status, 200);
+    assert.match(standingBody, /Standing review required/);
+    assert.match(standingBody, /No private standing detail shown/);
+    assert.doesNotMatch(standingBody, /bad standing|failed member/i);
+  });
+});
+
 test("admin import prototype shows audit preview and single primary action", async () => {
   await withApiAndWeb(async (baseUrl) => {
     const signInResponse = await fetch(`${baseUrl}/signin`, {
@@ -292,9 +479,105 @@ test("admin import prototype shows audit preview and single primary action", asy
     assert.equal(response.status, 200);
     assert.match(body, /Import preview stewardship/);
     assert.match(body, /Audit label: import.preview.resolved_duplicate/);
-    assert.match(body, /Resolve duplicate/);
+    assert.match(body, /Review flagged rows/);
+    assert.match(body, /Preview and duplicate resolution do not mutate live records/);
+    assert.match(body, /No live mutation/);
     assert.equal((body.match(/data-primary-action="true"/g) || []).length, 1);
-    assert.doesNotMatch(body, /\/member/);
+    assert.doesNotMatch(body, /href="\/member/);
+  });
+});
+
+test("admin dashboard and members page integrate design handoff without member navigation", async () => {
+  await withRealApiAndWeb(async (baseUrl) => {
+    const signInResponse = await fetch(`${baseUrl}/signin`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded"
+      },
+      body: new URLSearchParams({
+        role: "admin",
+        subject: "members.admin"
+      }),
+      redirect: "manual"
+    });
+    const sessionCookie = signInResponse.headers.get("set-cookie");
+
+    const dashboard = await fetch(`${baseUrl}/admin`, {
+      headers: { cookie: sessionCookie || "" }
+    });
+    const dashboardBody = await dashboard.text();
+    assert.equal(dashboard.status, 200);
+    assert.match(dashboardBody, /Admin stewardship console/);
+    assert.match(dashboardBody, /Review imports/);
+    assert.equal((dashboardBody.match(/data-primary-action="true"/g) || []).length, 1);
+    assert.doesNotMatch(dashboardBody, /href="\/member/);
+
+    const members = await fetch(`${baseUrl}/admin/members`, {
+      headers: { cookie: sessionCookie || "" }
+    });
+    const membersBody = await members.text();
+    assert.equal(members.status, 200);
+    assert.match(membersBody, /Member stewardship/);
+    assert.match(membersBody, /Create temporary member/);
+    assert.match(membersBody, /I confirm this temporary record should be created for admin stewardship/);
+    assert.match(membersBody, /Clean Slate remains separated/);
+    assert.equal((membersBody.match(/data-primary-action="true"/g) || []).length, 1);
+    assert.doesNotMatch(membersBody, /href="\/member/);
+
+    const create = await fetch(`${baseUrl}/admin/members`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        cookie: sessionCookie || ""
+      },
+      body: new URLSearchParams({
+        displayName: "Temporary Design Member",
+        roleTitle: "Member",
+        organisation: "IWFSA",
+        confirmCreate: "confirmed"
+      })
+    });
+    const createBody = await create.text();
+    assert.equal(create.status, 200);
+    assert.match(createBody, /Temporary member record created/);
+    assert.match(createBody, /Create confirmation accepted/);
+    assert.match(createBody, /Temporary Design Member/);
+
+    const edit = await fetch(`${baseUrl}/admin/members/member-temporary-design-member/edit`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        cookie: sessionCookie || ""
+      },
+      body: new URLSearchParams({
+        displayName: "Temporary Design Member Updated",
+        roleTitle: "Programme Steward",
+        organisation: "IWFSA",
+        status: "Suspended",
+        confirmEdit: "confirmed"
+      })
+    });
+    const editBody = await edit.text();
+    assert.equal(edit.status, 200);
+    assert.match(editBody, /Temporary member record updated/);
+    assert.match(editBody, /Edit confirmation accepted/);
+    assert.match(editBody, /Temporary Design Member Updated/);
+
+    const remove = await fetch(`${baseUrl}/admin/members/member-temporary-design-member/delete`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        cookie: sessionCookie || ""
+      },
+      body: new URLSearchParams({
+        confirmDelete: "confirmed"
+      })
+    });
+    const removeBody = await remove.text();
+    assert.equal(remove.status, 200);
+    assert.match(removeBody, /Temporary member record deleted/);
+    assert.match(removeBody, /Delete confirmation accepted/);
+    assert.doesNotMatch(removeBody, /Temporary Design Member Updated/);
   });
 });
 
@@ -366,6 +649,7 @@ test("public gallery and story render approved projection without private fields
     assert.equal(gallery.status, 200);
     assert.match(galleryBody, /Approved public stories/);
     assert.match(galleryBody, /Approved Member/);
+    assert.match(galleryBody, /\/legacy-assets\/member-portrait-ayanda.svg/);
     assert.doesNotMatch(galleryBody, /private-id|consent_timestamp|review_notes/);
     assert.doesNotMatch(galleryBody, /href="\/admin|href="\/member/);
 
@@ -430,6 +714,108 @@ test("member session cannot access admin surface", async () => {
 
     assert.equal(response.status, 303);
     assert.equal(response.headers.get("location"), "/");
+  });
+});
+
+test("member events page lists published events and records RSVP", async () => {
+  await withRealApiAndWeb(async (baseUrl) => {
+    const signInResponse = await fetch(`${baseUrl}/signin`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded"
+      },
+      body: new URLSearchParams({
+        role: "member",
+        subject: "events.member"
+      }),
+      redirect: "manual"
+    });
+    const sessionCookie = signInResponse.headers.get("set-cookie");
+    const eventsPage = await fetch(`${baseUrl}/member/events`, {
+      headers: { cookie: sessionCookie || "" }
+    });
+    const eventsBody = await eventsPage.text();
+
+    assert.equal(eventsPage.status, 200);
+    assert.match(eventsBody, /Choose and manage event participation/);
+    assert.match(eventsBody, /Leadership Circle/);
+    assert.match(eventsBody, /RSVP/);
+    assert.doesNotMatch(eventsBody, /href="\/admin/);
+
+    const rsvp = await fetch(`${baseUrl}/member/events`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        cookie: sessionCookie || ""
+      },
+      body: new URLSearchParams({ eventId: "event-1" })
+    });
+    const rsvpBody = await rsvp.text();
+
+    assert.equal(rsvp.status, 200);
+    assert.match(rsvpBody, /You&#39;re in\. See you there\./);
+  });
+});
+
+test("admin events page creates edits and deletes temporary events", async () => {
+  await withRealApiAndWeb(async (baseUrl) => {
+    const signInResponse = await fetch(`${baseUrl}/signin`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded"
+      },
+      body: new URLSearchParams({
+        role: "admin",
+        subject: "events.admin"
+      }),
+      redirect: "manual"
+    });
+    const sessionCookie = signInResponse.headers.get("set-cookie");
+    const page = await fetch(`${baseUrl}/admin/events`, {
+      headers: { cookie: sessionCookie || "" }
+    });
+    const pageBody = await page.text();
+
+    assert.equal(page.status, 200);
+    assert.match(pageBody, /Set up and steward events/);
+    assert.match(pageBody, /Create event/);
+    assert.match(pageBody, /Leadership Circle/);
+    assert.doesNotMatch(pageBody, /href="\/member/);
+
+    const create = await fetch(`${baseUrl}/admin/events`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        cookie: sessionCookie || ""
+      },
+      body: new URLSearchParams({ title: "Leadership Test Workshop", maxCapacity: "12" })
+    });
+    const createBody = await create.text();
+    assert.equal(create.status, 200);
+    assert.match(createBody, /Event created\./);
+    assert.match(createBody, /Leadership Test Workshop/);
+
+    const edit = await fetch(`${baseUrl}/admin/events/event-leadership-test-workshop/edit`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        cookie: sessionCookie || ""
+      },
+      body: new URLSearchParams({ title: "Updated Leadership Test Workshop", maxCapacity: "18" })
+    });
+    const editBody = await edit.text();
+    assert.equal(edit.status, 200);
+    assert.match(editBody, /Event updated\./);
+    assert.match(editBody, /Updated Leadership Test Workshop/);
+
+    const remove = await fetch(`${baseUrl}/admin/events/event-leadership-test-workshop/delete`, {
+      method: "POST",
+      headers: { cookie: sessionCookie || "" }
+    });
+    const removeBody = await remove.text();
+    assert.equal(remove.status, 200);
+    assert.match(removeBody, /Event deleted\./);
+    assert.doesNotMatch(removeBody, /Updated Leadership Test Workshop/);
   });
 });
 

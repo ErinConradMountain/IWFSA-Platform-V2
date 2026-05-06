@@ -9,6 +9,7 @@ const steps = [
   ["node", ["scripts/typecheck.mjs"]],
   ["node", ["scripts/workspace-ls.mjs"]],
   ["node", ["scripts/docs-control-check.mjs"]],
+  ["node", ["--experimental-strip-types", "scripts/design-route-smoke.mjs"]],
   ["node", ["scripts/ux-brand-check.mjs"]],
   ["node", ["scripts/phase3-design-check.mjs"]],
   ["node", ["scripts/phase4-spine-check.mjs"]],
