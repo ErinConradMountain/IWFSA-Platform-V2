@@ -127,6 +127,7 @@ Stores async follow-up work from committed imports and notification delivery job
 
 - `id`: deterministic message ID.
 - `event_type`: activation, birthday, RSVP, standing, celebration, or operational notification type.
+- `channel`: `email`, `in_app`, or `sms` delivery target selected at enqueue time.
 - `payload_ref`: redacted or non-sensitive reference.
 - `state`: `pending`, `sent`, `failed`, or `cancelled`.
 - `attempts`: delivery attempt count.
@@ -134,7 +135,7 @@ Stores async follow-up work from committed imports and notification delivery job
 - `correlation_id`: source request or job correlation.
 - `created_at`: enqueue timestamp.
 
-Invariant: source handlers do not block on provider delivery; duplicate deterministic IDs do not create duplicate delivery.
+Invariant: source handlers do not block on provider delivery; duplicate deterministic IDs do not create duplicate delivery; worker routing reads the persisted channel and must not silently default to another transport.
 
 ### `notification_preferences`
 
@@ -244,3 +245,4 @@ Invariant: review notes are sanitized before persistence; pending requests canno
 
 - Notification outbox: `pending -> sent`; failed delivery remains `pending` with incremented attempts and future `next_retry_at`; consent revocation changes pending messages to `cancelled`.
 - Notification preferences: current-year member preference updates replace the event/channel map and emit `notification.preferences_updated`.
+- Notification routing: producer-selected `channel` is persisted on enqueue and becomes the single worker routing source for provider selection.

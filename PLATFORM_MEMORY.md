@@ -34,9 +34,26 @@ These constraints are active platform memory and apply to every future phase.
 
 - Phase 9 starts with outbox-first delivery: no feature handler should call email, SMS, or in-app providers directly.
 - Celebratory notifications require granted, current-year consent, non-private visibility, good standing, and explicit channel opt-in.
-- Notification worker evidence uses `notification.outbox_processed`, retry results, dead-letter state, and `notification.cancelled`; member preference updates use `notification.preferences_updated`.
+- Notification worker evidence now includes `notification.provider_sent`, `notification.provider_failed`, `notification.outbox_processed`, retry results, dead-letter state, and `notification.cancelled`; member preference updates use `notification.preferences_updated`.
+- Provider routing is resolved behind a shared contract in `apps/common`; the worker chooses channel-specific adapters without embedding transport logic in feature handlers.
+- Notification outbox messages now persist the selected `channel`, and the worker routes only from that stored value. Silent default-to-email fallback is no longer allowed.
 - RSVP confirmation is the first producer and writes `rsvp.confirmation` only when standing, consent, and preferences allow it; review-standing RSVP is waitlisted but notification-skipped.
 - Admin broadcast remains preview-only until dispatch is explicitly approved; preview excludes review, blocked, opt-out, expired-consent, and hidden candidates without writing outbox rows.
+- Phase 9 is closed by `PHASE-9-SIGNOFF.md`; CI now includes a named Phase 9 notification gate.
+
+## Phase 10: Operational Maturity & Cutover
+
+- Phase 10 readiness now requires migration rehearsal, backup/restore drill, security regression, E2E sweep, SBOM/provenance evidence, release runbook, support playbook, and rollback authority before `v2.0-rc.1`.
+- RC work must use `docs/phase10-rc-checklist.md`, `docs/backup-restore-drill.md`, and `docs/security-regression-checklist.md` as active control documents.
+
+## Agent Workflow Memory
+
+- The workspace skill [phase-slice-validation-next-steps](.github/skills/phase-slice-validation-next-steps/SKILL.md) is the canonical handoff for turning verified slice evidence into governance-aligned recommendations.
+- The companion prompt [slice-brief-from-recommendations.prompt.md](.github/prompts/slice-brief-from-recommendations.prompt.md) converts validated recommendations into a bounded implementation brief.
+- The skill requires canonical context injection for governance principles, surface isolation, consent model, and audit catalog reference before producing recommendations.
+- Validation handoffs default to exactly 3 recommendations. If the work exceeds 12 implementation steps, split the remainder into the next slice.
+- The prompt must not generate a brief without commit status, test evidence, CI status, and updated documentation list.
+- First deterministic validation run passed via `node scripts/agent-workflow-check.mjs`; halt and refusal contracts held, and the archived artifact is `slices/phase9-slice3-brief.md`.
 
 ## Current Seed Strategy
 

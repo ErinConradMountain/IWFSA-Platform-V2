@@ -41,8 +41,8 @@
 | Public SSR isolation | Public gallery and story pages render only approved public projection fields and no hidden private state in DOM, meta tags, or structured data. | `P8-SSR-001` |
 | Dual approval stewardship | Honorary and memorial content requires first admin approval plus chief admin final approval before publication audit events emit. | `P8-DUAL-APPROVAL-001` |
 | Consent-aware notifications | Celebrations require current-year consent, non-private visibility, good standing, and explicit channel opt-in before enqueue. | `P9-NOTIFICATION-POLICY-001` |
-| Outbox delivery boundary | Notification delivery uses deterministic outbox IDs, retry scheduling, cancellation, and redacted audit events. | `P9-OUTBOX-001` |
-| Worker provider boundary | Fake provider worker verifies idempotent processing, 30s/15m/5-attempt retry policy, and dead-letter failure state before real channels. | `P9-WORKER-001` |
+| Outbox delivery boundary | Notification delivery uses deterministic outbox IDs, persisted channel routing, retry scheduling, cancellation, and redacted audit events. | `P9-OUTBOX-001` |
+| Worker provider boundary | Worker resolves channel-specific providers behind a shared contract, preserves idempotent processing, emits provider correlation audit evidence, and keeps 30s/15m/5-attempt retry and dead-letter state behind the outbox boundary. | `P9-WORKER-001`, `P9-PROVIDER-001`, `P9-PROVIDER-002` |
 | RSVP notification producer | RSVP confirmation enqueue re-validates consent, standing, and preferences, and skips review-standing delivery with audit evidence. | `P9-RSVP-PRODUCER-001` |
 | Broadcast preview exclusion | Admin broadcast preview excludes review, blocked, opt-out, expired-consent, and hidden candidates without writing outbox rows. | `P9-BROADCAST-001` |
 

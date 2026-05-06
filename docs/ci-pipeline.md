@@ -9,6 +9,7 @@
 - type validation
 - workspace graph check
 - documentation control check
+- agent workflow check for `.github/skills/phase-slice-validation-next-steps/SKILL.md` and `.github/prompts/slice-brief-from-recommendations.prompt.md` contract alignment
 - UX/brand/seed check
 - Phase 3 design check
 - Phase 4 spine check
@@ -62,3 +63,11 @@ Public delivery changes must verify `Cache-Control`, `Vary`, `X-Surface`, absenc
 ## Current Local Constraint
 
 `npm` is not available on PATH in the local Codex desktop runtime. Node-based equivalent gates are maintained and documented.
+
+## Governance Workflow Validation
+
+The phase validation workflow is considered valid only when:
+
+1. [phase-slice-validation-next-steps](../.github/skills/phase-slice-validation-next-steps/SKILL.md) enforces canonical context injection, provenance-first input checks, and the three-recommendation slice ceiling.
+2. [slice-brief-from-recommendations.prompt.md](../.github/prompts/slice-brief-from-recommendations.prompt.md) refuses to generate a brief without commit status, test evidence, CI state, and updated document list.
+3. The resulting slice brief remains aligned to [slice-brief-template.md](../slice-brief-template.md) and cites governance anchors in [audit-event-catalog.md](../audit-event-catalog.md), [security-controls-matrix.md](../security-controls-matrix.md), and [test-strategy.md](../test-strategy.md).

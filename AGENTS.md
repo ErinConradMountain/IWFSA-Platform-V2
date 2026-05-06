@@ -71,6 +71,19 @@ Before making changes:
 6. Run the documented verification commands.
 7. Update documentation when the change affects product meaning, governance, privacy, architecture, roadmap, or delivery sequence.
 
+## Agent Workflow Chain
+
+Use the workspace skill [phase-slice-validation-next-steps](.github/skills/phase-slice-validation-next-steps/SKILL.md) when turning a completed slice into governance-aligned recommendations.
+
+Use the workspace prompt [slice-brief-from-recommendations.prompt.md](.github/prompts/slice-brief-from-recommendations.prompt.md) only after the validation output contains provenance evidence, updated docs, and a bounded three-recommendation handoff.
+
+For this workflow:
+
+- Inject canonical governance context before running the skill: platform principles, surface isolation, consent model, and audit catalog reference.
+- Treat missing provenance evidence as a stop condition, not a drafting invitation.
+- Keep each validation handoff to three recommendations maximum unless a P0 security or cutover exception is explicitly justified.
+- Split overflow into the next slice rather than widening the current handoff.
+
 ## Phase 2 Active Control Contract
 
 Before generating or changing any route, form, API handler, policy rule, session behavior, or privileged workflow:

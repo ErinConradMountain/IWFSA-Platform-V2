@@ -99,6 +99,7 @@ test("outbox enqueue is idempotent and failed delivery uses exponential retry wi
   const message = createNotificationOutboxMessage({
     id: "notification-1",
     eventType: "birthday",
+    channel: "email",
     payloadRef: "member:1:birthday:2026",
     createdAt: "2026-05-03T12:00:00.000Z",
     correlationId: "corr-notify"
@@ -167,6 +168,7 @@ test("consent revocation cancels pending outbox messages and emits redacted audi
   repository.enqueue(createNotificationOutboxMessage({
     id: "notification-cancel",
     eventType: "celebration",
+    channel: "email",
     payloadRef: "member:3:celebration",
     createdAt: "2026-05-03T12:00:00.000Z",
     correlationId: "corr-cancel"

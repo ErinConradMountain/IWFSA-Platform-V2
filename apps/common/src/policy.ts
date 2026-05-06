@@ -28,7 +28,8 @@ export type TaskId =
   | "admin.public-review.queue"
   | "admin.notifications.broadcast"
   | "admin.audit.read"
-  | "admin.support-notes.add";
+  | "admin.support-notes.add"
+  | "admin.notifications.replay";
 
 export type PolicyInput = {
   role: Role | null;
@@ -70,7 +71,8 @@ export const SURFACE_TASK_MATRIX: Record<TaskId, { surface: Surface; fallback: s
   "admin.public-review.queue": { surface: "admin", fallback: "/admin" },
   "admin.notifications.broadcast": { surface: "admin", fallback: "/admin" },
   "admin.audit.read": { surface: "admin", fallback: "/admin" },
-  "admin.support-notes.add": { surface: "admin", fallback: "/admin" }
+  "admin.support-notes.add": { surface: "admin", fallback: "/admin" },
+  "admin.notifications.replay": { surface: "admin", fallback: "/admin" }
 };
 
 export function evaluate(input: PolicyInput): PolicyResult {

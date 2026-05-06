@@ -78,8 +78,14 @@ Phase 2 adds these required test IDs:
 | `P9-OUTBOX-001` | Notification outbox enqueue is idempotent, failed delivery schedules retry, and consent revocation cancels pending items. |
 | `P9-PREFERENCES-001` | Member notification preferences are CSRF-protected, annual-scope persisted, sanitized, and audited. |
 | `P9-WORKER-001` | Notification worker uses a fake provider, avoids duplicate delivery on rerun, schedules bounded backoff, and dead-letters exhausted rows. |
+| `P9-PROVIDER-001` | Worker resolves notification providers by channel through a shared contract without bypassing the outbox boundary. |
+| `P9-PROVIDER-002` | Provider acceptance emits correlation-safe `notification.provider_sent` evidence without duplicate provider sends on rerun. |
 | `P9-RSVP-PRODUCER-001` | RSVP confirmation producer writes a redacted outbox payload only for eligible standing/consent/preference state. |
 | `P9-BROADCAST-001` | Admin broadcast preview is RBAC-gated, excludes ineligible audiences, emits audit, and writes zero outbox rows. |
+| `P10-CI-001` | Release candidate CI runs syntax, tests, type validation, workspace graph, docs, phase gates, SBOM, supply-chain, and provenance checks. |
+| `P10-RESTORE-001` | Backup/restore drill verifies data integrity, audit continuity, and repository contract behavior in an isolated environment. |
+| `P10-SECURITY-001` | Security regression confirms session, CSRF, public projection, standing, notification, telemetry, and supply-chain controls. |
+| `P10-E2E-001` | Public, member, and admin E2E sweep covers core cutover workflows with no P0/P1 findings. |
 
 ## Layers
 
@@ -103,6 +109,16 @@ E2E tests cover public, member, and admin surfaces through the browser. They mus
 
 Security tests cover CSRF, session fixation, authorization bypass, account enumeration, dependency risk, log redaction, and private data leakage.
 
+### Agent Workflow Validation
+
+Agent workflow validation protects skill and prompt contracts that gate planning and slice handoff behavior. The current deterministic checks are:
+
+- `node scripts/validate-skill-halt.mjs`
+- `node scripts/validate-slice-brief-prompt.mjs`
+- `node scripts/agent-workflow-check.mjs`
+
+These checks verify halt behavior for missing governance context, refusal behavior for incomplete provenance, and the presence plus slice-discipline of the archived brief artifact.
+
 ## Quality Gates
 
 - Strict TypeScript mode remains enabled.
@@ -110,6 +126,13 @@ Security tests cover CSRF, session fixation, authorization bypass, account enume
 - Telemetry must include a correlation ID and must redact session IDs, tokens, credentials, and raw PII.
 - No direct cross-app source imports are allowed; shared code flows through `apps/common`.
 - In-memory persistence is permitted only for local/test boundaries.
+
+## Slice Planning Guardrails
+
+- Governance validation handoffs default to exactly 3 recommendations per slice.
+- Recommendation `Slice Scope` values map to cognitive effort as follows: `Low` = one contained change or control hardening step, `Medium` = one bounded cross-module slice with straightforward verification, `High` = one governance-critical slice that still fits the current phase handoff.
+- If a validation handoff would require more than 12 total implementation steps, split the overflow into the next slice rather than widening the current brief.
+- P0 security or cutover exceptions may override the three-recommendation ceiling only when explicitly marked and justified in the output.
 
 ## Trace Linkage
 

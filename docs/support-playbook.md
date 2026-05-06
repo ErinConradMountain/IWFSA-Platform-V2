@@ -21,3 +21,13 @@ Support workflows must protect member dignity and avoid exposing private data du
 ## Records
 
 Use audit correlation IDs and redacted metadata. Do not copy raw PII into support notes.
+
+## Phase 10 Support Readiness
+
+Before RC promotion, support must be able to:
+
+1. Ask for and record a correlation ID.
+2. Identify whether the issue is public, member, admin, import, event, standing, notification, or audit related.
+3. Confirm whether the user is seeing a generic denial by design.
+4. Escalate suspected privacy leaks or audit gaps immediately.
+5. Use runbook links rather than raw database screenshots in support notes.

@@ -1,17 +1,21 @@
 import type { AuditEventEmitter } from "@iwfsa/common/audit";
+import type { NotificationChannel } from "@iwfsa/common/notification-policy";
 
 export type NotificationEventType = "birthday" | "rsvp" | "rsvp.confirmation" | "standing_change" | "celebration" | "admin_operational" | "admin_broadcast";
 export type NotificationOutboxStatus = "pending" | "sent" | "failed" | "cancelled";
+const VALID_NOTIFICATION_CHANNELS = new Set<NotificationChannel>(["email", "in_app", "sms"]);
 
 export type NotificationOutboxMessage = {
   id: string;
   eventType: NotificationEventType;
+  channel: NotificationChannel;
   payloadRef: string;
   status: NotificationOutboxStatus;
   attempts: number;
   createdAt: string;
   nextRetryAt: string | null;
   correlationId: string;
+  parentId?: string | null;
 };
 
 export type NotificationOutboxRepository = {
@@ -21,6 +25,7 @@ export type NotificationOutboxRepository = {
   markFailed(id: string, failedAt: string, retryPolicy?: NotificationRetryPolicy): NotificationOutboxMessage | null;
   cancelByPayloadRef(payloadRef: string, cancelledAt: string): NotificationOutboxMessage[];
   list(): NotificationOutboxMessage[];
+  get(id: string): NotificationOutboxMessage | null;
 };
 
 export type NotificationRetryPolicy = {
@@ -44,19 +49,27 @@ export const DEFAULT_NOTIFICATION_RETRY_POLICY: NotificationRetryPolicy = {
 export function createNotificationOutboxMessage(input: {
   id: string;
   eventType: NotificationEventType;
+  channel: NotificationChannel;
   payloadRef: string;
   createdAt: string;
   correlationId: string;
+  parentId?: string | null;
 }): NotificationOutboxMessage {
+  if (!VALID_NOTIFICATION_CHANNELS.has(input.channel)) {
+    throw new Error(`invalid notification channel: ${input.channel}`);
+  }
+
   return {
     id: input.id,
     eventType: input.eventType,
+    channel: input.channel,
     payloadRef: input.payloadRef,
     status: "pending",
     attempts: 0,
     createdAt: input.createdAt,
     nextRetryAt: input.createdAt,
-    correlationId: input.correlationId
+    correlationId: input.correlationId,
+    parentId: input.parentId || null
   };
 }
 
@@ -131,6 +144,10 @@ export function createInMemoryNotificationOutboxRepository(): NotificationOutbox
 
     list() {
       return [...messages.values()];
+    },
+
+    get(id) {
+      return messages.get(id) || null;
     }
   };
 }
@@ -157,6 +174,7 @@ export function processNotificationOutboxBatch(input: {
             correlationId: message.correlationId,
             metadata: {
               eventType: message.eventType,
+              channel: message.channel,
               payloadRef: message.payloadRef,
               providerRef: result.providerRef || "provider-accepted"
             }
@@ -176,6 +194,7 @@ export function processNotificationOutboxBatch(input: {
         correlationId: message.correlationId,
         metadata: {
           eventType: message.eventType,
+          channel: message.channel,
           payloadRef: message.payloadRef,
           attempts: failed.attempts
         }
@@ -202,6 +221,7 @@ export function cancelPendingNotifications(input: {
       correlationId: input.correlationId,
       metadata: {
         eventType: message.eventType,
+        channel: message.channel,
         payloadRef: message.payloadRef
       }
     });
