@@ -16,3 +16,16 @@ Verification recorded for this slice:
 - `npm run ux:check`
 - `npm run typecheck`
 - `npm run ci` through supply-chain checks; provenance remains blocked until the repository has a clean tracked working tree.
+
+## 2026-05-06 - Split Phase 9/10 Slice And Extracted Design Helper Boundary
+
+- Committed notification/Phase 9 closure and Phase 10 readiness gates as a separate slice from the design handoff integration work.
+- Verified the committed Phase 9/10 slice from a clean detached worktree with `npm run ci`.
+- Extracted server-rendered design helpers from `apps/web/src/server.ts` into `apps/web/src/design-components.ts`.
+- Preserved route-level policy, auth, CSRF, fallback, and API gateway logic inside `apps/web/src/server.ts`.
+
+Verification recorded for this slice:
+
+- `npm run test`
+- `npm run design:smoke`
+- `npm run typecheck`

@@ -12,3 +12,15 @@ Current implementation baseline:
 - `npm run ci` includes the design smoke check after the agent workflow check and before the UX/brand gate.
 
 Open next step: split notification, Phase 9, and Phase 10 changes into their own slice, then extract the server-rendered design helpers from `apps/web/src/server.ts` into a clearer module boundary.
+
+## 2026-05-06 - Design Helper Module Boundary
+
+The server-rendered design helper patterns now live in `apps/web/src/design-components.ts`.
+
+Current implementation baseline:
+
+- `apps/web/src/server.ts` owns route rendering, auth/session flow, policy/fallback behavior, and API gateway calls.
+- `apps/web/src/design-components.ts` owns small reusable HTML render helpers for status badges, status summaries, priority panels, and info callouts.
+- The extracted helpers remain server-rendered prototype infrastructure, not a production React component library.
+
+Open next step: keep moving repeated route-shell UI into small typed server-render helpers only where it clarifies governance and avoids mixing policy logic into presentation helpers.

@@ -7,6 +7,12 @@ import { brand } from "@iwfsa/common/design-tokens";
 import { evaluate, type Surface, type TaskId } from "@iwfsa/common/policy";
 import { buildHealthPayload, readRequestBody, sendHtml, sendJson, sendRedirect, type ServiceConfig } from "@iwfsa/common/runtime";
 import type { ConsentState, Standing } from "@iwfsa/common/session-repository";
+import {
+  renderInfoCallout,
+  renderPriorityPanel,
+  renderStatusBadges,
+  type PriorityItem
+} from "./design-components.ts";
 
 type WebRole = "member" | "admin" | "chief_admin";
 
@@ -58,13 +64,6 @@ type AdminMemberView = {
   organisation: string;
   status: string;
   updatedAt: string;
-};
-type DesignStatusTone = "members" | "public" | "private" | "audit" | "warning";
-type DesignStatusBadge = { label: string; tone?: DesignStatusTone };
-type PriorityItem = {
-  title: string;
-  body: string;
-  badges: DesignStatusBadge[];
 };
 type AdminEventView = {
   id: string;
@@ -737,35 +736,6 @@ function renderMemberProfilePublicationHint(): string {
     body: "Your profile will only appear publicly when your standing is Good and a curator approves it. You retain full control and can withdraw visibility at any time.",
     surface: "member"
   });
-}
-
-function renderVisibilityBadge(item: DesignStatusBadge): string {
-  return `<span class="status-badge ${item.tone || ""}" aria-label="${escapeHtml(item.label)}">${escapeHtml(item.label)}</span>`;
-}
-
-function renderStatusSummary(items: DesignStatusBadge[]): string {
-  return `<p class="status-row">${items.map(renderVisibilityBadge).join("")}</p>`;
-}
-
-function renderPriorityPanel(item: PriorityItem): string {
-  return `<article class="design-panel">
-    <h3>${escapeHtml(item.title)}</h3>
-    ${renderStatusSummary(item.badges)}
-    <p>${escapeHtml(item.body)}</p>
-  </article>`;
-}
-
-function renderInfoCallout(input: { id: string; title: string; body: string; surface: NavSurface }): string {
-  const titleId = `${input.id}-title`;
-  const copyId = `${input.id}-copy`;
-  return `<div class="info-callout" data-component="InfoCallout" data-surface="${input.surface}" role="note" aria-labelledby="${titleId}" aria-describedby="${copyId}">
-    <strong id="${titleId}">${escapeHtml(input.title)}</strong>
-    <p id="${copyId}">${escapeHtml(input.body)}</p>
-  </div>`;
-}
-
-function renderStatusBadges(items: DesignStatusBadge[]): string {
-  return renderStatusSummary(items);
 }
 
 function renderMemberDashboardPage(): string {
