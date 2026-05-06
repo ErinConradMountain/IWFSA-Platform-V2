@@ -20,6 +20,7 @@ Invalid reverse transitions are rejected and must not mutate state.
 - If capacity is available, the member receives `registered`.
 - If capacity is full, the member receives `waitlisted` with deterministic ascending `waitlist_position`.
 - Cancellation promotes the earliest eligible waitlisted member and enqueues a `waitlist_promoted` outbox message.
+- RSVP confirmation notifications are enqueued only after RSVP succeeds and notification policy re-validates standing, consent, and preferences.
 
 ## Audience Targeting
 
@@ -30,6 +31,8 @@ Eligibility requires:
 - the event audience allows the member by `all`, active standing, group, or role.
 
 Denied access returns a generic RFC 9457-style `403` and emits `EVENT_ACCESS_DENIED` without revealing hidden event data.
+
+Review-standing members may be waitlisted by RSVP policy, but RSVP confirmation enqueue is skipped and audited with `rsvp.notification_skipped`.
 
 ## Secure Document Boundary
 

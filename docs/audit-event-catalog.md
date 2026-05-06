@@ -41,9 +41,15 @@ Audit events provide operational evidence for identity, consent, import, standin
 | `profile.honorary_published` | Chief admin completes final approval for an honorary entry | `member_profile` | Emitted only after first admin approval; metadata uses redacted notes and the final approver correlation ID. |
 | `profile.memorial_published` | Chief admin completes final approval for a memorial entry | `member_profile` | Emitted only after first admin approval; metadata must avoid family/contact/private biographical PII. |
 | `notification.preferences_updated` | Member updates notification channel/event preferences | `notification_preferences` | Metadata includes consent scope year and event type keys only. |
-| `notification.sent` | Worker receives provider accepted/sent result | `outbox_message` | Metadata includes event type, payload reference, and provider reference only. |
-| `notification.failed` | Worker delivery attempt fails and is scheduled for retry | `outbox_message` | Metadata includes event type, payload reference, and attempt count. |
+| `notification.provider_sent` | Worker provider adapter accepts delivery for a resolved channel | `outbox_message` | Metadata includes event type, channel, payload reference, and provider reference only. |
+| `notification.provider_failed` | Worker provider adapter rejects or fails delivery for a resolved channel | `outbox_message` | Metadata includes event type, channel, payload reference, and safe failure reason only. |
+| `notification.sent` | Worker receives provider accepted/sent result | `outbox_message` | Metadata includes event type, channel, payload reference, and provider reference only. |
+| `notification.failed` | Worker delivery attempt fails and is scheduled for retry | `outbox_message` | Metadata includes event type, channel, payload reference, and attempt count. |
 | `notification.cancelled` | Pending message is cancelled after consent revocation or policy change | `outbox_message` | Metadata includes event type and payload reference only. |
+| `notification.outbox_processed` | Worker processes one outbox row through a provider adapter | `outbox_message` | Metadata includes event type, channel, payload reference, attempts, provider reference when available, and result `sent`, `retry_scheduled`, or `dead_letter`. |
+| `notification.broadcast_previewed` | Admin previews a broadcast audience without enqueueing messages | `notification_broadcast` | Metadata includes channel, target count, and excluded count only. |
+| `rsvp.notification_enqueued` | RSVP confirmation outbox row is created after standing/consent check | `outbox_message` | Metadata includes event ID and RSVP state only. |
+| `rsvp.notification_skipped` | RSVP succeeds but notification enqueue is blocked by policy | `outbox_message` | Metadata includes event ID and safe denial reason only. |
 | `EVENT_STATE_CHANGED` | Admin publishes, closes, or archives event | `event` | Metadata includes previous and new state. |
 | `RSVP_REGISTERED` | Eligible member registers within capacity | `event` | No raw member PII in metadata. |
 | `WAITLIST_JOINED` | Eligible member joins full event waitlist | `event` | Metadata includes state only. |

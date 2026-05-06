@@ -1,4 +1,4 @@
-import http, { type IncomingMessage, type ServerResponse } from "node:http";
+﻿import http, { type IncomingMessage, type ServerResponse } from "node:http";
 
 import { buildSessionCookie, clearSessionCookie, normalizeRole, resolveAuthContext } from "@iwfsa/common/auth";
 import { createAuditEventEmitter, type AuditAction, type AuditRepository } from "@iwfsa/common/audit";
@@ -9,11 +9,21 @@ import {
   rsvpToEvent,
   transitionEventStatus,
   type EventParticipant,
+  type EventRecord,
   type EventRepositories,
   type EventStatus
 } from "@iwfsa/common/events";
 import { commitImport, previewImport } from "@iwfsa/common/import-pipeline";
-import { createInMemoryNotificationPreferenceRepository, sanitizeNotificationPreferences, type NotificationPreferenceRepository } from "@iwfsa/common/notification-policy";
+import {
+  createInMemoryNotificationPreferenceRepository,
+  evaluateBroadcastAudience,
+  evaluateNotificationPolicy,
+  sanitizeNotificationPreferences,
+  type BroadcastAudienceCandidate,
+  type NotificationChannel,
+  type NotificationPreferenceRepository
+} from "@iwfsa/common/notification-policy";
+import { createInMemoryNotificationOutboxRepository, createNotificationOutboxMessage, type NotificationOutboxRepository } from "@iwfsa/common/outbox";
 import type { PlatformRepositoryAdapter } from "@iwfsa/common/persistence";
 import { evaluate, type Surface, type TaskId } from "@iwfsa/common/policy";
 import type { PlatformRepositories } from "@iwfsa/common/repositories";
@@ -56,6 +66,7 @@ type ApiDependencies = {
   publicApprovalRepository?: PublicApprovalRepository;
   publicProfileRepository?: PublicProfileRepository;
   notificationPreferenceRepository?: NotificationPreferenceRepository;
+  notificationOutboxRepository?: NotificationOutboxRepository;
   eventRepositories?: EventRepositories;
   standingRepositories?: StandingRepositories;
   logSink?: LogSink;
@@ -63,6 +74,64 @@ type ApiDependencies = {
 
 const STATE_CHANGING_METHODS = new Set(["POST", "PUT", "DELETE", "PATCH"]);
 const CSRF_HEADER = "x-csrf-token";
+
+type AdminMemberRecord = {
+  id: string;
+  displayName: string;
+  roleTitle: string;
+  organisation: string;
+  status: "Active" | "Suspended";
+  updatedAt: string;
+};
+
+function slugify(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48);
+}
+
+function stringField(value: unknown, fallback = ""): string {
+  return typeof value === "string" ? value.trim().slice(0, 140) : fallback;
+}
+
+function memberFromBody(body: Record<string, unknown>, existing?: AdminMemberRecord): AdminMemberRecord | null {
+  const displayName = stringField(body.displayName, existing?.displayName || "");
+  if (!displayName) {
+    return null;
+  }
+
+  return {
+    id: existing?.id || `member-${slugify(displayName) || Date.now().toString(36)}`,
+    displayName,
+    roleTitle: stringField(body.roleTitle, existing?.roleTitle || "Member") || "Member",
+    organisation: stringField(body.organisation, existing?.organisation || "IWFSA") || "IWFSA",
+    status: body.status === "Suspended" ? "Suspended" : "Active",
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function eventFromBody(body: Record<string, unknown>, existing?: EventRecord): EventRecord | null {
+  const title = stringField(body.title, existing?.title || "");
+  if (!title) {
+    return null;
+  }
+
+  const rawCapacity = Number(body.maxCapacity ?? existing?.maxCapacity ?? 20);
+  const maxCapacity = Number.isFinite(rawCapacity) ? Math.max(1, Math.min(500, Math.floor(rawCapacity))) : 20;
+  return {
+    id: existing?.id || `event-${slugify(title) || Date.now().toString(36)}`,
+    title,
+    status: existing?.status || "draft",
+    maxCapacity,
+    registeredCount: existing?.registeredCount || 0,
+    waitlistCount: existing?.waitlistCount || 0,
+    audience: { mode: "standing_active" },
+    version: (existing?.version || 0) + 1
+  };
+}
 
 async function readJsonBody(request: IncomingMessage): Promise<Record<string, unknown>> {
   const rawBody = (await readRequestBody(request)).toString("utf8").trim();
@@ -226,6 +295,8 @@ export function createApiServer(config: ServiceConfig, dependencies: ApiDependen
   const standingRepositories = dependencies.standingRepositories || createStandingRepositories();
   const publicApprovalRepository = dependencies.publicApprovalRepository || createInMemoryPublicApprovalRepository();
   const notificationPreferenceRepository = dependencies.notificationPreferenceRepository || createInMemoryNotificationPreferenceRepository();
+  const notificationOutboxRepository = dependencies.notificationOutboxRepository || createInMemoryNotificationOutboxRepository();
+  const adminMemberRecords = new Map<string, AdminMemberRecord>();
   const publicProfileRepository = dependencies.publicProfileRepository || createPublicProfileRepository({
     query() {
       return { rows: [] };
@@ -484,6 +555,27 @@ export function createApiServer(config: ServiceConfig, dependencies: ApiDependen
       return;
     }
 
+    if (request.method === "POST" && url.pathname === "/api/admin/members/clean-slate") {
+      if (!applyPolicy(response, { ...authContext, surface: "admin", task: "admin.members.clean_slate", auditTrail: true }, auditRepository, correlationId)) {
+        return;
+      }
+
+      emitAudit(
+        auditRepository,
+        "SEED_MEMBERS_CLEAN_SLATE",
+        correlationId,
+        { scope: "temporary_seed_members", mode: "prototype" },
+        authContext.subject || "admin",
+        "member_seed",
+        "temporary"
+      );
+      sendJson(response, 202, {
+        status: "accepted",
+        message: "Temporary seed members have been marked for clean-slate testing."
+      });
+      return;
+    }
+
     if (request.method === "GET" && url.pathname === "/api/member/placeholder") {
       if (!applyPolicy(response, { ...authContext, surface: "member", task: "member.dashboard" }, auditRepository, correlationId)) {
         return;
@@ -518,6 +610,152 @@ export function createApiServer(config: ServiceConfig, dependencies: ApiDependen
         status: "accepted",
         message: "The request has been processed."
       });
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/admin/members") {
+      if (!applyPolicy(response, { ...authContext, surface: "admin", task: "admin.members.manage", auditTrail: true }, auditRepository, correlationId)) {
+        return;
+      }
+
+      sendJson(response, 200, { status: "accepted", members: [...adminMemberRecords.values()] });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/admin/members") {
+      if (!applyPolicy(response, { ...authContext, surface: "admin", task: "admin.members.manage", auditTrail: true }, auditRepository, correlationId)) {
+        return;
+      }
+
+      let body: Record<string, unknown> = {};
+      try {
+        body = await readJsonBody(request);
+      } catch {
+        sendJson(response, 400, { status: "rejected", message: "The request could not be completed." });
+        return;
+      }
+
+      const member = memberFromBody(body);
+      if (!member) {
+        sendJson(response, 400, { status: "rejected", message: "The request could not be completed." });
+        return;
+      }
+
+      adminMemberRecords.set(member.id, member);
+      emitAudit(auditRepository, "ADMIN_MEMBER_CREATED", correlationId, { status: member.status }, authContext.subject || "admin", "member", "opaque");
+      sendJson(response, 201, { status: "accepted", member });
+      return;
+    }
+
+    const adminMemberMatch = url.pathname.match(/^\/api\/admin\/members\/([^/]+)$/);
+    if ((request.method === "PATCH" || request.method === "DELETE") && adminMemberMatch) {
+      if (!applyPolicy(response, { ...authContext, surface: "admin", task: "admin.members.manage", auditTrail: true }, auditRepository, correlationId)) {
+        return;
+      }
+
+      const existing = adminMemberRecords.get(adminMemberMatch[1]);
+      if (!existing) {
+        sendJson(response, 404, { status: "not_found", message: "The route is unavailable." });
+        return;
+      }
+
+      if (request.method === "DELETE") {
+        adminMemberRecords.delete(existing.id);
+        emitAudit(auditRepository, "ADMIN_MEMBER_DELETED", correlationId, { status: existing.status }, authContext.subject || "admin", "member", "opaque");
+        sendJson(response, 202, { status: "accepted" });
+        return;
+      }
+
+      let body: Record<string, unknown> = {};
+      try {
+        body = await readJsonBody(request);
+      } catch {
+        sendJson(response, 400, { status: "rejected", message: "The request could not be completed." });
+        return;
+      }
+
+      const updated = memberFromBody(body, existing);
+      if (!updated) {
+        sendJson(response, 400, { status: "rejected", message: "The request could not be completed." });
+        return;
+      }
+
+      adminMemberRecords.set(updated.id, updated);
+      emitAudit(auditRepository, "ADMIN_MEMBER_UPDATED", correlationId, { status: updated.status }, authContext.subject || "admin", "member", "opaque");
+      sendJson(response, 202, { status: "accepted", member: updated });
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/admin/events") {
+      if (!applyPolicy(response, { ...authContext, surface: "admin", task: "admin.events.manage", auditTrail: true }, auditRepository, correlationId)) {
+        return;
+      }
+
+      sendJson(response, 200, { status: "accepted", events: [...eventRepositories.events.values()] });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/admin/events") {
+      if (!applyPolicy(response, { ...authContext, surface: "admin", task: "admin.events.manage", auditTrail: true }, auditRepository, correlationId)) {
+        return;
+      }
+
+      let body: Record<string, unknown> = {};
+      try {
+        body = await readJsonBody(request);
+      } catch {
+        sendJson(response, 400, { status: "rejected", message: "The request could not be completed." });
+        return;
+      }
+
+      const event = eventFromBody(body);
+      if (!event) {
+        sendJson(response, 400, { status: "rejected", message: "The request could not be completed." });
+        return;
+      }
+
+      eventRepositories.events.set(event.id, event);
+      emitAudit(auditRepository, "ADMIN_EVENT_CREATED", correlationId, { status: event.status, maxCapacity: event.maxCapacity }, authContext.subject || "admin", "event", event.id);
+      sendJson(response, 201, { status: "accepted", event });
+      return;
+    }
+
+    const adminEventMatch = url.pathname.match(/^\/api\/admin\/events\/([^/]+)$/);
+    if ((request.method === "PATCH" || request.method === "DELETE") && adminEventMatch) {
+      if (!applyPolicy(response, { ...authContext, surface: "admin", task: "admin.events.manage", auditTrail: true }, auditRepository, correlationId)) {
+        return;
+      }
+
+      const existing = eventRepositories.events.get(adminEventMatch[1]);
+      if (!existing) {
+        sendJson(response, 404, { status: "not_found", message: "The route is unavailable." });
+        return;
+      }
+
+      if (request.method === "DELETE") {
+        eventRepositories.events.delete(existing.id);
+        emitAudit(auditRepository, "ADMIN_EVENT_DELETED", correlationId, { status: existing.status }, authContext.subject || "admin", "event", existing.id);
+        sendJson(response, 202, { status: "accepted" });
+        return;
+      }
+
+      let body: Record<string, unknown> = {};
+      try {
+        body = await readJsonBody(request);
+      } catch {
+        sendJson(response, 400, { status: "rejected", message: "The request could not be completed." });
+        return;
+      }
+
+      const updated = eventFromBody(body, existing);
+      if (!updated) {
+        sendJson(response, 400, { status: "rejected", message: "The request could not be completed." });
+        return;
+      }
+
+      eventRepositories.events.set(updated.id, updated);
+      emitAudit(auditRepository, "ADMIN_EVENT_UPDATED", correlationId, { status: updated.status, maxCapacity: updated.maxCapacity }, authContext.subject || "admin", "event", updated.id);
+      sendJson(response, 202, { status: "accepted", event: updated });
       return;
     }
 
@@ -560,6 +798,67 @@ export function createApiServer(config: ServiceConfig, dependencies: ApiDependen
         correlationId,
         consentScopeYear: preferences.consentScopeYear,
         eventTypes: Object.keys(preferences.preferences)
+      });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/admin/notifications/broadcast/preview") {
+      if (!applyPolicy(response, { ...authContext, surface: "admin", task: "admin.notifications.broadcast", auditTrail: true }, auditRepository, correlationId)) {
+        return;
+      }
+
+      let body: Record<string, unknown> = {};
+      try {
+        body = await readJsonBody(request);
+      } catch {
+        sendJson(response, 400, { status: "rejected", message: "The request could not be completed." });
+        return;
+      }
+
+      const candidates = Array.isArray(body.candidates) ? body.candidates : [];
+      const currentYear = typeof body.currentYear === "number" && Number.isInteger(body.currentYear) ? body.currentYear : new Date().getUTCFullYear();
+      const channel: NotificationChannel = body.channel === "email" || body.channel === "sms" ? body.channel : "in_app";
+      const broadcastCandidates: BroadcastAudienceCandidate[] = candidates
+        .filter((candidate): candidate is Record<string, unknown> => Boolean(candidate && typeof candidate === "object"))
+        .map((candidate) => {
+          const memberId = typeof candidate.memberId === "string" ? candidate.memberId : "member";
+          const consentScopeYear = typeof candidate.consentScopeYear === "number" && Number.isInteger(candidate.consentScopeYear) ? candidate.consentScopeYear : currentYear;
+          return {
+            memberId,
+            standing: candidate.standing === "good" || candidate.standing === "review" || candidate.standing === "blocked" || candidate.standing === "active" ? candidate.standing : "blocked",
+            consent: candidate.consent === "granted" || candidate.consent === "revoked" || candidate.consent === "not_required" ? candidate.consent : "missing",
+            visibility: candidate.visibility === "public" || candidate.visibility === "member_only" ? candidate.visibility : "hidden",
+            preferences: sanitizeNotificationPreferences({
+              memberId,
+              consentScopeYear,
+              preferences: candidate.preferences,
+              updatedAt: new Date().toISOString()
+            })
+          };
+        });
+      const result = evaluateBroadcastAudience({
+        candidates: broadcastCandidates,
+        channel,
+        currentYear
+      });
+      emitAudit(
+        auditRepository,
+        "notification.broadcast_previewed",
+        correlationId,
+        {
+          channel,
+          targetCount: result.included.length,
+          excludedCount: result.excluded.length
+        },
+        authContext.subject || "admin",
+        "notification_broadcast",
+        "preview"
+      );
+      sendJson(response, 202, {
+        status: "accepted",
+        correlationId,
+        targetCount: result.included.length,
+        excludedCount: result.excluded.length
       });
       return;
     }
@@ -967,6 +1266,18 @@ export function createApiServer(config: ServiceConfig, dependencies: ApiDependen
       return;
     }
 
+    if (request.method === "GET" && url.pathname === "/api/events") {
+      if (!applyPolicy(response, { ...authContext, surface: "member", task: "member.events.view" }, auditRepository, correlationId)) {
+        return;
+      }
+
+      sendJson(response, 200, {
+        status: "accepted",
+        events: [...eventRepositories.events.values()].filter((event) => event.status === "published")
+      });
+      return;
+    }
+
     const rsvpMatch = url.pathname.match(/^\/api\/events\/([^/]+)\/rsvp$/);
     if (request.method === "POST" && rsvpMatch) {
       if (!applyPolicy(response, { ...authContext, surface: "member", task: "member.events.rsvp" }, auditRepository, correlationId)) {
@@ -979,11 +1290,37 @@ export function createApiServer(config: ServiceConfig, dependencies: ApiDependen
       }
 
       try {
-        const rsvp = rsvpToEvent(eventRepositories, rsvpMatch[1], participantFromAuth(authContext), createAuditEventEmitter(auditRepository), correlationId);
+        const participant = participantFromAuth(authContext);
+        const rsvp = rsvpToEvent(eventRepositories, rsvpMatch[1], participant, createAuditEventEmitter(auditRepository), correlationId);
+        const preferences = notificationPreferenceRepository.findByMemberId(participant.memberId);
+        const notificationDecision = evaluateNotificationPolicy({
+          eventType: "rsvp.confirmation",
+          channel: "in_app",
+          consent: participant.consent,
+          visibility: "member_only",
+          standing: participant.standing,
+          preferences,
+          currentYear: new Date().getUTCFullYear()
+        });
+        const notificationCode = notificationDecision.decision === "ALLOW" ? "notification_enqueued" : "notification_skipped";
+        if (notificationDecision.decision === "ALLOW") {
+          notificationOutboxRepository.enqueue(createNotificationOutboxMessage({
+            id: `rsvp:${rsvp.eventId}:${rsvp.memberId}:${rsvp.state}`,
+            eventType: "rsvp.confirmation",
+            channel: "in_app",
+            payloadRef: `event:${rsvp.eventId}:member:${rsvp.memberId}:rsvp:${rsvp.state}`,
+            createdAt: rsvp.createdAt,
+            correlationId
+          }));
+          emitAudit(auditRepository, "rsvp.notification_enqueued", correlationId, { eventId: rsvp.eventId, state: rsvp.state }, participant.memberId, "outbox_message", "opaque");
+        } else {
+          emitAudit(auditRepository, "rsvp.notification_skipped", correlationId, { eventId: rsvp.eventId, reason: notificationDecision.reason }, participant.memberId, "outbox_message", "opaque");
+        }
         sendJson(response, 202, {
           status: rsvp.state,
           message: rsvp.state === "registered" ? "You're in. See you there." : "You are on the waitlist.",
-          waitlistPosition: rsvp.waitlistPosition
+          waitlistPosition: rsvp.waitlistPosition,
+          notificationCode
         });
       } catch {
         sendJson(response, 403, {

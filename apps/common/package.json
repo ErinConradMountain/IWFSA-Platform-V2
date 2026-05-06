@@ -12,6 +12,7 @@
     "./design-tokens": "./src/design-tokens.ts",
     "./events": "./src/events.ts",
     "./import-pipeline": "./src/import-pipeline.ts",
+    "./notification-provider": "./src/notification-provider.ts",
     "./notification-policy": "./src/notification-policy.ts",
     "./outbox": "./src/outbox.ts",
     "./persistence": "./src/persistence.ts",

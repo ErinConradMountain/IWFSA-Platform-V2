@@ -185,3 +185,89 @@
 **Test References:** `P9-NOTIFICATION-POLICY-001`, `P9-OUTBOX-001`, `P9-PREFERENCES-001`.
 
 **Status:** Accepted.
+
+## 2026-05-03 - Phase 9 Worker, RSVP Producer, And Broadcast Preview
+
+**Decision:** Add a fake-provider notification worker with bounded retry/dead-letter behavior, wire RSVP confirmation production through the notification policy, and expose an admin broadcast preview endpoint that evaluates audience eligibility without enqueueing messages.
+
+**Rationale:** Provider behavior, producer integration, and admin broadcast targeting must be proven before real delivery channels or UI are added. This keeps Phase 9 idempotent, consent-aware, and auditable.
+
+**Test References:** `P9-WORKER-001`, `P9-RSVP-PRODUCER-001`, `P9-BROADCAST-001`.
+
+**Status:** Accepted.
+
+## 2026-05-03 - Phase 9 Provider Adapter Boundary
+
+**Decision:** Move the notification provider contract into `apps/common`, add channel-specific email and SMS stubs behind a provider factory, and have the worker resolve adapters per message while emitting provider-level audit evidence.
+
+**Rationale:** The outbox already owns retry, dead-letter, and idempotent delivery state. Moving the provider contract to the shared boundary keeps transport concerns interchangeable, makes channel routing explicit, and preserves `outbox.id` to `correlationId` to `providerRef` evidence without leaking transport details into feature handlers.
+
+**Test References:** `P9-WORKER-001`, `P9-PROVIDER-001`, `P9-PROVIDER-002`.
+
+**Status:** Accepted.
+
+## 2026-05-03 - Phase 9 Outbox Channel Persistence
+
+**Decision:** Persist notification `channel` on outbox messages and remove worker-side fallback routing so provider selection is fully data-driven from the stored row.
+
+**Rationale:** The RSVP producer already knows the allowed channel at enqueue time. Persisting that value closes the gap where the worker could otherwise default to `email`, which would weaken consent traceability and make routing decisions implicit rather than auditable.
+
+**Test References:** `P9-OUTBOX-001`, `P9-WORKER-001`, `P9-PROVIDER-001`.
+
+**Status:** Accepted.
+
+## 2026-05-03 - Phase 9 Closure And Phase 10 Readiness
+
+**Decision:** Close Phase 9 with a sign-off artifact and add named CI gates for Phase 9 notifications plus Phase 10 operational readiness documentation.
+
+**Rationale:** The implementation already had notification policy, outbox, provider, worker, RSVP producer, and broadcast preview tests. Formal sign-off and Phase 10 runbooks prevent the project from advancing into release-candidate work without restore, security, E2E, provenance, and rollback evidence.
+
+**Test References:** `P9-*`, `P10-CI-001`, `P10-RESTORE-001`, `P10-SECURITY-001`, `P10-E2E-001`.
+
+**Status:** Accepted.
+
+## 2026-05-03 - Phase Validation Skill And Slice Brief Chain
+
+**Decision:** Keep the phase validation workflow workspace-specific, require injected governance context, cap default handoffs at three recommendations, and chain the validated output into a prompt-generated slice brief with strict provenance requirements.
+
+**Rationale:** The workflow encodes governance controls, not generic planning preferences. Parameterized context preserves IWFSA-specific privacy, consent, audit, and surface-isolation rules without weakening discovery or reuse. The three-recommendation ceiling and twelve-step split guard reduce scope creep and keep each handoff audit-ready.
+
+**Status:** Accepted.
+
+## 2026-05-03 - Phase Validation Workflow Contract Verified
+
+**Decision:** Adopt `node scripts/agent-workflow-check.mjs` as the deterministic local proof for the phase validation skill/prompt chain.
+
+**Rationale:** The Codex desktop runtime cannot invoke VS Code slash commands directly inside repository automation. A repository-local contract check gives a falsifiable guard for the explicit halt directive, structured refusal behavior, and archived brief slice discipline without pretending that prompt files are executable artifacts.
+
+**Evidence:** Successful local run of `node scripts/agent-workflow-check.mjs` after wiring `scripts/validate-skill-halt.mjs`, `scripts/validate-slice-brief-prompt.mjs`, and `slices/phase9-slice3-brief.md`.
+
+**Status:** Accepted.
+
+## 2026-05-06 - Webpages Handoff Integrated Into Build Plan
+
+**Decision:** Treat the cleaned `Webpages` folder as a design handoff package, not a production component source, and integrate its accepted page sheets through governed server-rendered route shells before richer component work.
+
+**Rationale:** The JSX previews use local tokens, inline styles, hard-coded colors, and demo-only state panels. Production route work must instead use `apps/common/src/design-tokens.ts`, `docs/surface-navigation-map.md`, shared policy checks, CSRF for state changes, audit-aware copy, and surface-scoped navigation.
+
+**Implementation Path:** Track the route-by-route work in `docs/design-handoff-integration-plan.md`; keep the `Webpages` page sheets as acceptance references; verify member/admin design pages through tests, UX checks, and browser E2E before release-candidate sign-off.
+
+**Status:** Accepted.
+
+## 2026-05-06 - Authenticated Design Smoke Helper
+
+**Decision:** Add `npm run design:smoke` as the local repeatable proof for authenticated design-route rendering before full browser sign-off.
+
+**Rationale:** The in-app browser can verify visible pages, but it must not rely on unsafe auto-submit workarounds or special unmapped test routes. The smoke helper starts isolated in-memory API/web servers, signs in through the normal HTTP route, and checks member/admin design pages for route markers, surface separation, and primary-action count.
+
+**Status:** Accepted.
+
+## 2026-05-06 - Browser Session Cookie Forwarding
+
+**Decision:** Forward only the API-issued session cookie from the web sign-in response to the browser, while keeping the API CSRF cookie internal to the server-to-server sign-in request.
+
+**Rationale:** Browser verification showed that combining the API CSRF cookie and session cookie into one forwarded `Set-Cookie` value could leave the browser unauthenticated after an otherwise successful sign-in. Separating the browser-facing session cookie from the internal CSRF exchange preserves normal browser cookie behavior without exposing extra CSRF state.
+
+**Evidence:** In-app browser sign-in now reaches `/admin` and `/member/dashboard`; `npm run test`, `npm run design:smoke`, and clean detached-worktree `npm run ci` passed after the fix.
+
+**Status:** Accepted.

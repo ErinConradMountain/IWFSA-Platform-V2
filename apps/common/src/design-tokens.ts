@@ -7,6 +7,23 @@ export const brand = {
     text: "#1A1A1A",
     mutedText: "#4D5A66",
     focus: "#005FCC",
+    legacyHome: {
+      ink: "#2F2924",
+      inkSoft: "#6D655D",
+      panel: "#FFFFFF",
+      panelWarm: "#FBF7EF",
+      backgroundTop: "#F7F3EC",
+      backgroundMid: "#F2EFE8",
+      backgroundBottom: "#EDE9E2",
+      accent: "#E96F00",
+      accentWarm: "#D88A2F",
+      accentDark: "#C75500",
+      heroInk: "#07131D",
+      heroMid: "#0D1824",
+      heroDeep: "#111D29",
+      photoWarm: "#D7C2A2",
+      photoDeep: "#A68457"
+    },
     semantic: {
       success: "#2E7D32",
       warning: "#ED6C02",
@@ -53,6 +70,21 @@ export type BrandTokenPath =
   | "colors.text"
   | "colors.mutedText"
   | "colors.focus"
+  | "colors.legacyHome.ink"
+  | "colors.legacyHome.inkSoft"
+  | "colors.legacyHome.panel"
+  | "colors.legacyHome.panelWarm"
+  | "colors.legacyHome.backgroundTop"
+  | "colors.legacyHome.backgroundMid"
+  | "colors.legacyHome.backgroundBottom"
+  | "colors.legacyHome.accent"
+  | "colors.legacyHome.accentWarm"
+  | "colors.legacyHome.accentDark"
+  | "colors.legacyHome.heroInk"
+  | "colors.legacyHome.heroMid"
+  | "colors.legacyHome.heroDeep"
+  | "colors.legacyHome.photoWarm"
+  | "colors.legacyHome.photoDeep"
   | "colors.semantic.success"
   | "colors.semantic.warning"
   | "colors.semantic.error"

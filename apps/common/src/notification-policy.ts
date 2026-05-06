@@ -56,7 +56,7 @@ export function sanitizeNotificationPreferences(input: {
   const raw = input.preferences && typeof input.preferences === "object" ? input.preferences as Record<string, unknown> : {};
   const next: NotificationPreferenceMap = {};
 
-  for (const eventType of ["birthday", "rsvp", "standing_change", "celebration", "admin_operational"] as const) {
+  for (const eventType of ["birthday", "rsvp", "rsvp.confirmation", "standing_change", "celebration", "admin_operational", "admin_broadcast"] as const) {
     const rawChannels = raw[eventType];
     if (!rawChannels || typeof rawChannels !== "object") {
       continue;
@@ -77,6 +77,56 @@ export function sanitizeNotificationPreferences(input: {
     preferences: next,
     updatedAt: input.updatedAt
   };
+}
+
+export type BroadcastAudienceCandidate = {
+  memberId: string;
+  standing: Standing;
+  consent: ConsentState;
+  visibility: "public" | "member_only" | "hidden";
+  preferences?: NotificationPreferences | null;
+};
+
+export type BroadcastAudienceResult = {
+  included: BroadcastAudienceCandidate[];
+  excluded: Array<{ memberId: string; reason: string }>;
+};
+
+export function evaluateBroadcastAudience(input: {
+  candidates: BroadcastAudienceCandidate[];
+  channel: NotificationChannel;
+  eventType?: NotificationEventType;
+  currentYear: number;
+}): BroadcastAudienceResult {
+  const eventType = input.eventType || "admin_broadcast";
+  const included: BroadcastAudienceCandidate[] = [];
+  const excluded: Array<{ memberId: string; reason: string }> = [];
+
+  for (const candidate of input.candidates) {
+    if (candidate.standing !== "good") {
+      excluded.push({ memberId: candidate.memberId, reason: "STANDING_NOT_ELIGIBLE" });
+      continue;
+    }
+    if (candidate.consent !== "granted") {
+      excluded.push({ memberId: candidate.memberId, reason: "CONSENT_REQUIRED" });
+      continue;
+    }
+    if (candidate.visibility === "hidden") {
+      excluded.push({ memberId: candidate.memberId, reason: "PRIVATE_VISIBILITY" });
+      continue;
+    }
+    if (!candidate.preferences || candidate.preferences.consentScopeYear !== input.currentYear) {
+      excluded.push({ memberId: candidate.memberId, reason: "CONSENT_SCOPE_EXPIRED" });
+      continue;
+    }
+    if (candidate.preferences.preferences[eventType]?.[input.channel] !== true) {
+      excluded.push({ memberId: candidate.memberId, reason: "BROADCAST_OPT_IN_REQUIRED" });
+      continue;
+    }
+    included.push(candidate);
+  }
+
+  return { included, excluded };
 }
 
 export function evaluateNotificationPolicy(input: NotificationPolicyInput): NotificationPolicyResult {
@@ -101,6 +151,10 @@ export function evaluateNotificationPolicy(input: NotificationPolicyInput): Noti
       return { decision: "DENY", reason: "CELEBRATION_OPT_IN_REQUIRED" };
     }
     return { decision: "ALLOW", reason: "CELEBRATION_ALLOWED" };
+  }
+
+  if (input.eventType === "rsvp.confirmation" && input.consent !== "granted") {
+    return { decision: "DENY", reason: "CONSENT_REQUIRED" };
   }
 
   if (explicit === false) {
