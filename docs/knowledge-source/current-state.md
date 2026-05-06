@@ -24,3 +24,13 @@ Current implementation baseline:
 - The extracted helpers remain server-rendered prototype infrastructure, not a production React component library.
 
 Open next step: keep moving repeated route-shell UI into small typed server-render helpers only where it clarifies governance and avoids mixing policy logic into presentation helpers.
+
+## 2026-05-06 - Designer Guidance Documentation Baseline
+
+The remaining designer guidance documents are enforceable handoff references and are part of the current documentation baseline:
+
+- `docs/designer-custom-instructions.md`
+- `docs/designer-page-handoff-checklist.md`
+- `docs/member-section-visual-design-brief.md`
+
+These files define design scope, page-level handoff checks, mobile/accessibility expectations, visual quality bars, token usage, surface separation, and member/admin dignity constraints. They do not change route policy, data, authentication, or workflow logic.

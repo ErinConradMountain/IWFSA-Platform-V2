@@ -261,3 +261,13 @@
 **Rationale:** The in-app browser can verify visible pages, but it must not rely on unsafe auto-submit workarounds or special unmapped test routes. The smoke helper starts isolated in-memory API/web servers, signs in through the normal HTTP route, and checks member/admin design pages for route markers, surface separation, and primary-action count.
 
 **Status:** Accepted.
+
+## 2026-05-06 - Browser Session Cookie Forwarding
+
+**Decision:** Forward only the API-issued session cookie from the web sign-in response to the browser, while keeping the API CSRF cookie internal to the server-to-server sign-in request.
+
+**Rationale:** Browser verification showed that combining the API CSRF cookie and session cookie into one forwarded `Set-Cookie` value could leave the browser unauthenticated after an otherwise successful sign-in. Separating the browser-facing session cookie from the internal CSRF exchange preserves normal browser cookie behavior without exposing extra CSRF state.
+
+**Evidence:** In-app browser sign-in now reaches `/admin` and `/member/dashboard`; `npm run test`, `npm run design:smoke`, and clean detached-worktree `npm run ci` passed after the fix.
+
+**Status:** Accepted.

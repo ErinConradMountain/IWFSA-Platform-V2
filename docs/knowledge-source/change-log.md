@@ -29,3 +29,16 @@ Verification recorded for this slice:
 - `npm run test`
 - `npm run design:smoke`
 - `npm run typecheck`
+
+## 2026-05-06 - Added Designer Guidance Documentation Baseline
+
+- Committed enforceable designer handoff guidance as a documentation-only slice.
+- Added a decision-log note for the browser-discovered session cookie forwarding fix.
+- Confirmed the accepted three-commit baseline remains scope-aligned.
+- Completed a 493px-wide in-app browser responsive pass across the checked member/admin routes.
+
+Verification recorded for this slice:
+
+- `git show --stat HEAD~2..HEAD`
+- `git show --stat HEAD~3..HEAD`
+- In-app browser route pass at 493px viewport
