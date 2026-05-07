@@ -74,6 +74,16 @@ type AdminEventView = {
   waitlistCount: number;
   version: number;
 };
+type PublicApprovalQueueView = {
+  id: string;
+  profileId: string;
+  memberId: string;
+  profileVersion: string;
+  requestedAt: string;
+  status: string;
+  contentType: string;
+  requiresDualApproval: boolean;
+};
 
 const LEGACY_ASSET_ROOT = join(process.cwd(), "apps", "web", "public", "legacy-assets");
 const LEGACY_SEED_MEMBER_PATH = join(process.cwd(), "seed", "legacy-members.json");
@@ -330,6 +340,15 @@ async function fetchAdminEvents(config: ServiceConfig, cookieHeader: string, fet
   return Array.isArray(response.body.events) ? response.body.events as AdminEventView[] : [];
 }
 
+async function fetchAdminPublicQueue(config: ServiceConfig, cookieHeader: string, fetchImpl: typeof fetch): Promise<PublicApprovalQueueView[]> {
+  try {
+    const response = await adminApiRequest(config, cookieHeader, fetchImpl, { method: "GET", path: "/api/admin/public-profiles/queue" });
+    return Array.isArray(response.body.records) ? response.body.records as PublicApprovalQueueView[] : [];
+  } catch {
+    return [];
+  }
+}
+
 async function fetchMemberEvents(config: ServiceConfig, cookieHeader: string, fetchImpl: typeof fetch): Promise<AdminEventView[]> {
   const response = await adminApiRequest(config, cookieHeader, fetchImpl, { method: "GET", path: "/api/events" });
   return Array.isArray(response.body.events) ? response.body.events as AdminEventView[] : [];
@@ -373,7 +392,7 @@ body { margin: 0; background: linear-gradient(180deg, color-mix(in srgb, var(--i
 body.page-public-home, body.page-sign-in { background: linear-gradient(180deg, var(--iwfsa-home-bg-top) 0%, var(--iwfsa-home-bg-mid) 50%, var(--iwfsa-home-bg-bottom) 100%); color: var(--iwfsa-home-ink); min-height: 100vh; }
 main { max-width: 72rem; margin: 0 auto; padding: 1.25rem 1rem 4rem; }
 .landing-main { max-width: none; padding: 0; }
-.shell { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(18rem, 0.65fr); gap: 2rem; align-items: stretch; background: var(--iwfsa-background); border: 1px solid color-mix(in srgb, var(--iwfsa-primary) 14%, transparent); border-radius: 0.5rem; padding: 1.25rem; box-shadow: 0 1.25rem 3rem color-mix(in srgb, var(--iwfsa-primary) 12%, transparent); }
+.shell { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(18rem, 0.65fr); gap: 2rem; align-items: stretch; background: linear-gradient(180deg, var(--iwfsa-background), color-mix(in srgb, var(--iwfsa-surface) 72%, var(--iwfsa-background))); border: 1px solid color-mix(in srgb, var(--iwfsa-primary) 14%, transparent); border-radius: 0.5rem; padding: clamp(1rem, 2vw, 1.65rem); box-shadow: 0 1.25rem 3rem color-mix(in srgb, var(--iwfsa-primary) 12%, transparent); }
 .shell-single { grid-template-columns: minmax(0, 1fr); }
 .shell-content { padding: 1rem; }
 .eyebrow { color: var(--iwfsa-primary); font-size: ${brand.typography.scale.sm}; font-weight: 800; letter-spacing: 0; text-transform: uppercase; }
@@ -425,7 +444,7 @@ form { margin-top: 1.2rem; }
 .story-card a { color: var(--iwfsa-primary); font-weight: 800; }
 .skip-link { position: absolute; top: -3rem; left: 1rem; padding: 0.6rem 0.85rem; border-radius: 999px; background: var(--iwfsa-home-ink); color: var(--iwfsa-background); text-decoration: none; z-index: 100; }
 .skip-link:focus-visible { top: 1rem; }
-.site-header { position: sticky; top: 0; z-index: 30; padding: 0.75rem 0 0.65rem; backdrop-filter: blur(20px); background: color-mix(in srgb, var(--iwfsa-home-panel-warm) 84%, transparent); border-bottom: 1px solid color-mix(in srgb, var(--iwfsa-home-ink) 8%, transparent); }
+.site-header { position: sticky; top: 0; z-index: 30; padding: 0.75rem 0 0.65rem; backdrop-filter: blur(20px); background: color-mix(in srgb, var(--iwfsa-home-panel-warm) 90%, transparent); border-bottom: 1px solid color-mix(in srgb, var(--iwfsa-home-ink) 8%, transparent); box-shadow: 0 0.75rem 1.5rem color-mix(in srgb, var(--iwfsa-home-ink) 5%, transparent); }
 .site-header-shell { width: min(1100px, 92%); margin: 0 auto; display: grid; grid-template-columns: minmax(25rem, 1fr) minmax(20rem, 0.78fr) auto; grid-template-areas: "brand mission nav"; align-items: start; gap: 0.65rem 1.55rem; }
 .site-header-shell.is-dense-nav { position: relative; display: flex; flex-direction: column; align-items: stretch; gap: 0.85rem; padding-top: 3.4rem; }
 .brand-lockup { grid-area: brand; min-width: 0; }
@@ -486,9 +505,13 @@ form { margin-top: 1.2rem; }
 .v1-sign-in-form input { width: 100%; min-height: 2.45rem; border: 1px solid color-mix(in srgb, var(--iwfsa-primary) 16%, transparent); border-radius: 12px; padding: 0.62rem 0.78rem; font: inherit; background: color-mix(in srgb, var(--iwfsa-background) 96%, transparent); color: var(--iwfsa-home-ink); }
 .v1-sign-in-form button { margin-top: 0.3rem; min-height: 2.55rem; width: auto; background: linear-gradient(135deg, var(--iwfsa-home-accent), var(--iwfsa-home-accent-dark)); color: var(--iwfsa-background); border: 0; border-radius: 999px; padding: 0.55rem 0.9rem; font-weight: 800; }
 .v1-sign-in-status { margin: 0.25rem 0 0; color: var(--iwfsa-home-ink-soft); font-size: ${brand.typography.scale.sm}; }
+.preview-credential-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.55rem; padding: 0 0.9rem 0.9rem; }
+.preview-credential { border: 1px solid color-mix(in srgb, var(--iwfsa-primary) 14%, transparent); border-radius: 12px; padding: 0.65rem; background: color-mix(in srgb, var(--iwfsa-surface) 84%, var(--iwfsa-background)); }
+.preview-credential strong, .preview-credential span { display: block; }
+.preview-credential span { color: var(--iwfsa-home-ink-soft); font-size: ${brand.typography.scale.xs}; line-height: 1.45; }
 .admin-seed-tools { display: grid; gap: 1rem; margin-top: 1rem; }
 .admin-seed-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 0.75rem; }
-.admin-seed-card { border: 1px solid color-mix(in srgb, var(--iwfsa-primary) 16%, transparent); border-radius: 8px; padding: 0.8rem; background: var(--iwfsa-background); }
+.admin-seed-card { border: 1px solid color-mix(in srgb, var(--iwfsa-primary) 16%, transparent); border-radius: 8px; padding: 0.8rem; background: var(--iwfsa-background); box-shadow: 0 0.7rem 1.4rem color-mix(in srgb, var(--iwfsa-primary) 7%, transparent); }
 .admin-seed-card strong, .admin-seed-card span { display: block; }
 .admin-clean-form { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
 .event-workspace { display: grid; gap: 1rem; margin-top: 1.2rem; }
@@ -504,10 +527,23 @@ form { margin-top: 1.2rem; }
 .event-status { margin: 0; color: var(--iwfsa-home-ink-soft); font-weight: 700; }
 .design-workspace { display: grid; gap: 1rem; margin-top: 1.2rem; }
 .design-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.85rem; }
-.design-panel { display: grid; gap: 0.45rem; border: 1px solid color-mix(in srgb, var(--iwfsa-primary) 14%, transparent); border-radius: 8px; padding: 0.9rem; background: color-mix(in srgb, var(--iwfsa-background) 94%, var(--iwfsa-home-panel)); }
+.design-panel { display: grid; gap: 0.45rem; border: 1px solid color-mix(in srgb, var(--iwfsa-primary) 14%, transparent); border-radius: 8px; padding: 0.95rem; background: color-mix(in srgb, var(--iwfsa-background) 94%, var(--iwfsa-home-panel)); box-shadow: 0 0.75rem 1.6rem color-mix(in srgb, var(--iwfsa-primary) 7%, transparent); }
 .design-panel h2, .design-panel h3 { margin: 0; color: var(--iwfsa-primary); }
 .design-panel p { margin: 0; }
 .design-panel ul { margin: 0.3rem 0 0; }
+.reviewer-hero { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(16rem, 0.85fr); gap: 1rem; align-items: stretch; margin: 1rem 0 1.2rem; }
+.reviewer-card { border: 1px solid color-mix(in srgb, var(--iwfsa-primary) 14%, transparent); border-radius: 8px; padding: 1rem; background: linear-gradient(180deg, color-mix(in srgb, var(--iwfsa-background) 96%, transparent), color-mix(in srgb, var(--iwfsa-surface) 78%, var(--iwfsa-background))); }
+.reviewer-card strong { display: block; color: var(--iwfsa-primary); margin-bottom: 0.35rem; }
+.metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); gap: 0.75rem; margin: 1rem 0; }
+.metric-card { border: 1px solid color-mix(in srgb, var(--iwfsa-primary) 13%, transparent); border-radius: 8px; padding: 0.85rem; background: var(--iwfsa-background); }
+.metric-card strong { display: block; color: var(--iwfsa-primary); font-size: ${brand.typography.scale.xl}; line-height: 1.1; }
+.metric-card span { display: block; color: var(--iwfsa-muted-text); font-size: ${brand.typography.scale.sm}; line-height: 1.35; margin-top: 0.2rem; }
+.review-record { display: grid; gap: 0.55rem; border-left: 0.25rem solid var(--iwfsa-public); }
+.record-meta { display: flex; flex-wrap: wrap; gap: 0.45rem; margin: 0; }
+.record-meta span { display: inline-flex; min-height: 2rem; align-items: center; border-radius: 999px; padding: 0.3rem 0.62rem; background: color-mix(in srgb, var(--iwfsa-primary) 7%, var(--iwfsa-background)); color: var(--iwfsa-home-ink); font-size: ${brand.typography.scale.sm}; font-weight: 800; }
+.review-route-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 0.75rem; margin-top: 1rem; }
+.review-route { min-height: 100%; color: inherit; text-decoration: none; }
+.review-route:hover, .review-route:focus-visible { transform: translateY(-1px); box-shadow: 0 1rem 2rem color-mix(in srgb, var(--iwfsa-primary) 12%, transparent); }
 .status-row { display: flex; flex-wrap: wrap; gap: 0.45rem; margin: 0; }
 .status-badge { display: inline-flex; align-items: center; min-height: 2rem; border-radius: 999px; padding: 0.32rem 0.65rem; background: color-mix(in srgb, var(--iwfsa-primary) 8%, var(--iwfsa-background)); color: var(--iwfsa-home-ink); font-size: ${brand.typography.scale.sm}; font-weight: 800; }
 .status-badge.members { border-left: 0.25rem solid var(--iwfsa-members); }
@@ -548,6 +584,7 @@ form { margin-top: 1.2rem; }
   .v1-sign-in-stage-copy { grid-template-columns: 1fr; align-items: start; width: calc(100% - 1.5rem); max-width: none; padding: 1.35rem 0.75rem 0; }
   .v1-sign-in-stage-copy .v1-lead { margin-bottom: 0; }
   .v1-sign-in-card { position: relative; top: auto; left: auto; transform: none; width: calc(100% - 1.5rem); max-width: 22rem; margin: 0 0.75rem; }
+  .preview-credential-grid, .reviewer-hero { grid-template-columns: 1fr; }
   .event-actions, .surface-nav { align-items: stretch; }
   .surface-nav a, .primary-action, button, input, select { min-height: 44px; }
   .event-actions button, .event-actions input, .event-actions select { width: 100%; }
@@ -711,6 +748,21 @@ function renderPrototypeNote(kind: "profile" | "import" | "approval"): string {
   };
 
   return copy[kind];
+}
+
+function renderPreviewCredentials(): string {
+  return `<section class="preview-credential-grid" aria-label="Temporary preview credentials">
+    <article class="preview-credential">
+      <strong>Admin preview</strong>
+      <span>Username: akeida</span>
+      <span>Password: 1possibility</span>
+    </article>
+    <article class="preview-credential">
+      <strong>Member preview</strong>
+      <span>Username: naledi.k</span>
+      <span>Password: 1possibility</span>
+    </article>
+  </section>`;
 }
 
 function renderAdminSeedTools(input: { cleaned?: boolean } = {}): string {
@@ -885,22 +937,40 @@ function renderAdminDashboardPage(): string {
     title: "Admin Console",
     eyebrow: "Admin Console",
     heading: "Admin stewardship console",
-    summary: "Review the current governance work without entering member self-service surfaces.",
+    summary: "A focused pilot workspace for IWFSA administrators to review member records, events, public storytelling, standing, imports, and audit readiness.",
     items: ["Events, members, imports, standing, review queue, audit, and support notes stay admin-scoped.", "State-changing work requires policy, CSRF, and audit checks.", "Operational panels use stewardship language rather than member profile language."],
     surface: "admin",
     primaryAction: { href: "/admin/import/preview", label: "Review imports" },
-    extra: `<section class="design-workspace" aria-labelledby="admin-priorities">
+    extra: `<section class="reviewer-hero" aria-labelledby="admin-review-readiness">
+      <div class="reviewer-card">
+        <strong id="admin-review-readiness">Reviewer-ready pilot</strong>
+        <p>Use this console to walk the IWFSA admin through temporary member records, event controls, public review checks, and governance fallbacks. All data on this surface is dummy test data.</p>
+      </div>
+      <div class="reviewer-card">
+        <strong>Suggested test path</strong>
+        <p>Start with Members, create one temporary record, review Events, then check Public review and Audit readiness.</p>
+      </div>
+    </section>
+    <section class="design-workspace" aria-labelledby="admin-priorities">
       <h2 id="admin-priorities">Stewardship priorities</h2>
       <div class="design-grid">
         <article class="design-panel"><h3>Imports</h3>${renderStatusBadges([{ label: "Preview before commit", tone: "audit" }])}<p>Review staged rows before any live mutation.</p></article>
         <article class="design-panel"><h3>Members</h3>${renderStatusBadges([{ label: "Temporary records", tone: "private" }])}<p>Create and correct records with confirmation and audit notes.</p></article>
         <article class="design-panel"><h3>Public review</h3>${renderStatusBadges([{ label: "Approval gated", tone: "public" }])}<p>Approve only public-safe projections that pass consent, standing, and allowlist checks.</p></article>
       </div>
+      <div class="review-route-grid" aria-label="Admin review routes">
+        <a class="design-panel review-route" href="/admin/members"><h3>Member records</h3><p>Inspect seeded dummy members and create a temporary record.</p></a>
+        <a class="design-panel review-route" href="/admin/events"><h3>Event controls</h3><p>Create, edit, and delete temporary event records.</p></a>
+        <a class="design-panel review-route" href="/admin/public-review"><h3>Public review</h3><p>Review public-safe storytelling gates.</p></a>
+        <a class="design-panel review-route" href="/admin/audit"><h3>Audit readiness</h3><p>Confirm redacted audit language and future lookup framing.</p></a>
+      </div>
     </section>`
   });
 }
 
 function renderAdminMembersPage(input: { members: AdminMemberView[]; message?: string; confirmation?: string }): string {
+  const activeCount = input.members.filter((member) => member.status === "Active").length;
+  const suspendedCount = input.members.filter((member) => member.status !== "Active").length;
   const rows = input.members.map((member) => `<article class="design-panel" data-member-id="${escapeHtml(member.id)}">
     <h3>${escapeHtml(member.displayName)}</h3>
     ${renderStatusBadges([{ label: `Standing: ${member.status}`, tone: member.status === "Active" ? "members" : "warning" }, { label: "Audit metadata recorded", tone: "audit" }])}
@@ -924,13 +994,18 @@ function renderAdminMembersPage(input: { members: AdminMemberView[]; message?: s
     title: "Admin Members",
     eyebrow: "Admin Members",
     heading: "Member stewardship",
-    summary: "Create and review temporary member records under admin policy and audit controls.",
+    summary: "Create and review seeded dummy member records under admin policy and audit controls.",
     items: ["Create, edit, delete, standing, visibility, approval, and clean-slate actions require confirmation and audit-aware outcomes.", "No real contact details or private member identity details appear in the list view.", "Clean Slate remains separated from ordinary record stewardship."],
     surface: "admin",
     extra: `<section class="design-workspace" aria-labelledby="admin-members-controls">
       <h2 id="admin-members-controls">Temporary member records</h2>
       ${input.message ? `<p class="event-status">${escapeHtml(input.message)}</p>` : ""}
       ${input.confirmation ? renderInfoCallout({ id: "admin-members-confirmation", title: "Audit-aware confirmation", body: input.confirmation, surface: "admin" }) : ""}
+      <div class="metric-grid" aria-label="Member record summary">
+        <div class="metric-card"><strong>${escapeHtml(input.members.length)}</strong><span>Dummy member records loaded</span></div>
+        <div class="metric-card"><strong>${escapeHtml(activeCount)}</strong><span>Active test members</span></div>
+        <div class="metric-card"><strong>${escapeHtml(suspendedCount)}</strong><span>Restricted test members</span></div>
+      </div>
       <form class="event-actions" method="post" action="/admin/members" data-primary-action="true">
         <label>Display name <input name="displayName" placeholder="Temporary member" required /></label>
         <label>Role <input name="roleTitle" placeholder="Member" /></label>
@@ -978,7 +1053,18 @@ function renderAdminStandingPage(): string {
   });
 }
 
-function renderAdminPublicReviewPage(): string {
+function renderAdminPublicReviewPage(input: { records: PublicApprovalQueueView[] } = { records: [] }): string {
+  const records = input.records.map((record) => `<article class="design-panel review-record" data-approval-id="${escapeHtml(record.id)}">
+    <h3>${escapeHtml(record.profileId)}</h3>
+    ${renderStatusBadges([{ label: record.status, tone: "public" }, { label: record.requiresDualApproval ? "Dual approval" : "Single approval", tone: record.requiresDualApproval ? "audit" : "members" }])}
+    <p class="record-meta">
+      <span>${escapeHtml(record.contentType)}</span>
+      <span>${escapeHtml(record.profileVersion)}</span>
+      <span>Requested ${escapeHtml(record.requestedAt.slice(0, 10))}</span>
+    </p>
+    <p>Review only the public-safe projection. Hidden, private, and members-only fields are excluded before approval.</p>
+  </article>`).join("");
+
   return renderShell({
     title: "Admin Public Review",
     eyebrow: "Admin Review Queue",
@@ -987,7 +1073,21 @@ function renderAdminPublicReviewPage(): string {
     items: ["Hidden, private, and members-only fields are absent from the preview and DOM.", "Approval creates an audit-labelled event.", "Blocked profiles show safe reasons without exposing private content."],
     surface: "admin",
     primaryAction: { href: "/admin/public-review", label: "Review approval checklist" },
-    extra: `${renderPrototypeNote("approval")}<section class="design-workspace" aria-labelledby="public-review-checklist">
+    extra: `${renderPrototypeNote("approval")}<section class="reviewer-hero" aria-labelledby="public-review-summary">
+      <div class="reviewer-card">
+        <strong id="public-review-summary">Seeded review queue</strong>
+        <p>${escapeHtml(input.records.length)} dummy public profile review request${input.records.length === 1 ? "" : "s"} are ready for the administrator to inspect.</p>
+      </div>
+      <div class="reviewer-card">
+        <strong>Governance guardrail</strong>
+        <p>Approval is framed as stewardship, not member self-service. Public storytelling remains consent-led and approval-gated.</p>
+      </div>
+    </section>
+    <section class="design-workspace" aria-labelledby="public-review-records">
+      <h2 id="public-review-records">Review queue</h2>
+      <div class="design-grid">${records || "<p>No public profile review requests are waiting.</p>"}</div>
+    </section>
+    <section class="design-workspace" aria-labelledby="public-review-checklist">
       <h2 id="public-review-checklist">Approval checklist</h2>
       <ul class="compact-list">
         <li>Consent granted.</li>
@@ -1173,6 +1273,7 @@ function renderSignInPage(input: { currentSession: WebAuthSession; errorMessage?
           ${errorBlock}
           ${sessionNote}
           ${signInForm}
+          ${renderPreviewCredentials()}
         </div>
       </section>`
   });
@@ -1757,7 +1858,9 @@ export function createWebServer(config: ServiceConfig, dependencies: WebDependen
         : url.pathname.includes("standing")
           ? renderAdminStandingPage()
           : url.pathname.includes("public-review")
-            ? renderAdminPublicReviewPage()
+            ? renderAdminPublicReviewPage({
+                records: await fetchAdminPublicQueue(config, request.headers.cookie || "", fetchImpl)
+              })
             : url.pathname.includes("audit")
               ? renderAdminAuditPage()
               : url.pathname.includes("clean-slate")

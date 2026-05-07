@@ -29,7 +29,7 @@ import { evaluate, type Surface, type TaskId } from "@iwfsa/common/policy";
 import type { PlatformRepositories } from "@iwfsa/common/repositories";
 import { canFinalApprove, emitPublicationAudit, evaluatePublicApprovalPolicy, publicationAuditForContentType, transitionPublicationState, type PublicationState } from "@iwfsa/common/public-approval";
 import { createInMemoryPublicApprovalRepository, type PublicApprovalRepository } from "@iwfsa/common/public-approval-repository";
-import { createPublicProfileRepository, type PublicProfileRepository } from "@iwfsa/common/public-profile-repository";
+import { createPublicProfileRepository, type PublicProfileProjection, type PublicProfileRepository } from "@iwfsa/common/public-profile-repository";
 import { buildHealthPayload, readRequestBody, sendJson, type ServiceConfig } from "@iwfsa/common/runtime";
 import type { ConsentState, Session, SessionRepository, SessionRotationReason, Standing } from "@iwfsa/common/session-repository";
 import {
@@ -83,6 +83,85 @@ type AdminMemberRecord = {
   status: "Active" | "Suspended";
   updatedAt: string;
 };
+
+type SeededPublicProfileProjection = PublicProfileProjection & {
+  publicImage: string;
+};
+
+const SEEDED_ADMIN_MEMBER_RECORDS: AdminMemberRecord[] = [
+  {
+    id: "member-ava-naidoo",
+    displayName: "Ava Naidoo",
+    roleTitle: "Board Member",
+    organisation: "Marula Advisory",
+    status: "Active",
+    updatedAt: "2026-05-07T08:00:00.000Z"
+  },
+  {
+    id: "member-naledi-khumalo",
+    displayName: "Naledi Khumalo",
+    roleTitle: "Programme Steward",
+    organisation: "Khumalo Advisory",
+    status: "Active",
+    updatedAt: "2026-05-07T08:05:00.000Z"
+  },
+  {
+    id: "member-nomsa-dlamini",
+    displayName: "Nomsa Dlamini",
+    roleTitle: "Mentorship Lead",
+    organisation: "IWFSA",
+    status: "Active",
+    updatedAt: "2026-05-07T08:10:00.000Z"
+  },
+  {
+    id: "member-zara-mokoena",
+    displayName: "Zara Mokoena",
+    roleTitle: "Member",
+    organisation: "Mokoena Consulting",
+    status: "Suspended",
+    updatedAt: "2026-05-07T08:15:00.000Z"
+  }
+];
+
+const SEEDED_PUBLIC_PROFILES: SeededPublicProfileProjection[] = [
+  {
+    displayName: "Ava Naidoo",
+    biography: "Board and advisory leader focused on governance, inclusive growth, and mentoring emerging women leaders.",
+    updatedAt: "2026-05-07T08:00:00.000Z",
+    publicImage: "/legacy-assets/member-portrait-ayanda.svg"
+  },
+  {
+    displayName: "Naledi Khumalo",
+    biography: "Programme steward supporting member connection, leadership development, and sector-based knowledge exchange.",
+    updatedAt: "2026-05-07T08:05:00.000Z",
+    publicImage: "/legacy-assets/member-portrait-lerato.svg"
+  }
+];
+
+function seedPublicApprovalQueue(repository: PublicApprovalRepository): void {
+  for (const input of [
+    {
+      id: "approval-ava-public-profile",
+      profileId: "seed-ava-naidoo",
+      memberId: "seed-ava-naidoo",
+      profileVersion: "profile-v1",
+      requestedAt: "2026-05-07T08:20:00.000Z",
+      correlationId: "seed-review-ava",
+      contentType: "profile" as const
+    },
+    {
+      id: "approval-naledi-public-profile",
+      profileId: "seed-naledi-khumalo",
+      memberId: "seed-naledi-khumalo",
+      profileVersion: "profile-v1",
+      requestedAt: "2026-05-07T08:25:00.000Z",
+      correlationId: "seed-review-naledi",
+      contentType: "profile" as const
+    }
+  ]) {
+    repository.createReviewRequest(input);
+  }
+}
 
 function slugify(value: string): string {
   return value
@@ -296,12 +375,17 @@ export function createApiServer(config: ServiceConfig, dependencies: ApiDependen
   const publicApprovalRepository = dependencies.publicApprovalRepository || createInMemoryPublicApprovalRepository();
   const notificationPreferenceRepository = dependencies.notificationPreferenceRepository || createInMemoryNotificationPreferenceRepository();
   const notificationOutboxRepository = dependencies.notificationOutboxRepository || createInMemoryNotificationOutboxRepository();
-  const adminMemberRecords = new Map<string, AdminMemberRecord>();
+  const adminMemberRecords = new Map<string, AdminMemberRecord>(SEEDED_ADMIN_MEMBER_RECORDS.map((member) => [member.id, { ...member }]));
   const publicProfileRepository = dependencies.publicProfileRepository || createPublicProfileRepository({
-    query() {
-      return { rows: [] };
+    query<T>(_sql: string, params: unknown[]) {
+      const limit = typeof params[0] === "number" ? params[0] : 25;
+      return { rows: SEEDED_PUBLIC_PROFILES.slice(0, limit) as T[] };
     }
   });
+
+  if (!dependencies.publicApprovalRepository) {
+    seedPublicApprovalQueue(publicApprovalRepository);
+  }
 
   if (!eventRepositories.events.has("event-1")) {
     eventRepositories.events.set("event-1", {
@@ -348,11 +432,15 @@ export function createApiServer(config: ServiceConfig, dependencies: ApiDependen
 
     if (request.method === "GET" && url.pathname === "/api/public/profiles") {
       const limit = Math.min(50, Math.max(1, Number.parseInt(url.searchParams.get("limit") || "25", 10) || 25));
-      const profiles = publicProfileRepository.findApprovedPublicProfiles(limit).map((profile) => ({
-        displayName: profile.displayName,
-        biography: profile.biography,
-        updatedAt: profile.updatedAt
-      }));
+      const profiles = publicProfileRepository.findApprovedPublicProfiles(limit).map((profile) => {
+        const publicImage = (profile as SeededPublicProfileProjection).publicImage;
+        return {
+          displayName: profile.displayName,
+          biography: profile.biography,
+          updatedAt: profile.updatedAt,
+          ...(publicImage ? { publicImage } : {})
+        };
+      });
 
       sendJson(response, 200, {
         surface: "public",

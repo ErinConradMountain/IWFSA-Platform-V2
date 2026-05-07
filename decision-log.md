@@ -281,3 +281,13 @@
 **Test References:** `npm run design:smoke`, `P10-E2E-001`.
 
 **Status:** Accepted.
+
+## 2026-05-07 - Reviewer Pilot Uses Dummy Seed Data
+
+**Decision:** Seed the reviewer pilot with illustrative dummy members, public-safe profile projections, and pending public-review queue records while keeping the data behind the existing member, public, and admin route boundaries.
+
+**Rationale:** The IWFSA administrator needs a realistic review path before production data is connected. Dummy data allows the admin to test the app's shape, tone, and governance workflow without exposing real member contact details, credentials, private records, or publication decisions.
+
+**Test References:** `npm run test`, `npm run design:smoke`, `npm run ux:check`, browser route checks, public tunnel session checks.
+
+**Status:** Accepted.

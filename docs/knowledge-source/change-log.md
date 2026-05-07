@@ -1,5 +1,20 @@
 # Change Log
 
+## 2026-05-07 - Prepared Admin Reviewer Pilot
+
+- Seeded the API with dummy admin member records, approved public-safe profile projections, and pending public-review queue records.
+- Polished the sign-in, admin dashboard, admin members, and admin public-review pages for reviewer walkthroughs.
+- Added temporary preview credentials to the sign-in page for the admin and member test paths.
+- Exposed the local web app through a temporary Cloudflare quick tunnel for online review.
+
+Verification recorded for this slice:
+
+- `node --experimental-strip-types scripts/run-tests.mjs`
+- `node --experimental-strip-types scripts/design-route-smoke.mjs`
+- `node scripts/ux-brand-check.mjs`
+- In-app Browser DOM checks for public gallery, sign-in, admin dashboard, admin members, admin public review, member dashboard, and member events.
+- Public tunnel HTTP session checks for admin sign-in to `/admin/public-review` and member sign-in to `/member/events`.
+
 ## 2026-05-07 - Strengthened Route-Shell Smoke Coverage
 
 - Updated the public landing test to align with centralized public site navigation while preserving public/member/admin separation checks.

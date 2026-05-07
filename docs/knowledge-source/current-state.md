@@ -46,3 +46,17 @@ Current implementation baseline:
 - The public-review preparation page uses a review-checklist primary action rather than a future approval route that has not been implemented as a governed workflow.
 
 Open next step: complete the browser E2E sweep from `docs/design-handoff-integration-plan.md` after the working tree is clean enough for the provenance gate to pass.
+
+## 2026-05-07 - Admin Reviewer Pilot Baseline
+
+The local reviewer pilot now opens with seeded dummy data so the IWFSA administrator can inspect the current public, member, and admin surfaces without using real member records.
+
+Current implementation baseline:
+
+- Admin Members loads four dummy records with active and restricted standing examples.
+- Public Gallery renders two approved public-safe dummy profiles from the allowlisted projection path.
+- Admin Public Review renders two seeded pending review requests through the existing policy-gated admin queue.
+- Sign In shows temporary preview credentials for the admin and member reviewer flows.
+- A temporary Cloudflare quick tunnel can expose the local web service for external review while the app continues to use the local API service behind the server-rendered web layer.
+
+Open next step: convert the temporary tunnel into a durable preview deployment path once the server entrypoint and environment model are ready for hosted execution.
