@@ -6,6 +6,9 @@
 - Polished the sign-in, admin dashboard, admin members, and admin public-review pages for reviewer walkthroughs.
 - Added temporary preview credentials to the sign-in page for the admin and member test paths.
 - Exposed the local web app through a temporary Cloudflare quick tunnel for online review.
+- Added a route-by-route admin reviewer feedback checklist.
+- Added and tested a Vercel preview scaffold, then re-enabled Vercel SSO protection because the hosted serverless function still needs module-packaging work before it is safe to use as the public review link.
+- Fixed mobile header and public-gallery wrapping defects found during the 390px screenshot pass.
 
 Verification recorded for this slice:
 
@@ -14,6 +17,8 @@ Verification recorded for this slice:
 - `node scripts/ux-brand-check.mjs`
 - In-app Browser DOM checks for public gallery, sign-in, admin dashboard, admin members, admin public review, member dashboard, and member events.
 - Public tunnel HTTP session checks for admin sign-in to `/admin/public-review` and member sign-in to `/member/events`.
+- Headless Edge screenshots at 390px for `/signin` and `/public/gallery`.
+- Vercel CLI deployment attempts and SSO protection verification.
 
 ## 2026-05-07 - Strengthened Route-Shell Smoke Coverage
 

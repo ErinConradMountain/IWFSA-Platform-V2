@@ -388,7 +388,7 @@ function renderBrandCss(): string {
 }
 * { box-sizing: border-box; }
 html { background: var(--iwfsa-background); }
-body { margin: 0; background: linear-gradient(180deg, color-mix(in srgb, var(--iwfsa-surface) 82%, var(--iwfsa-background)), var(--iwfsa-background)); color: var(--iwfsa-text); font-family: ${brand.typography.fontFamily}; }
+body { margin: 0; max-width: 100%; overflow-x: hidden; background: linear-gradient(180deg, color-mix(in srgb, var(--iwfsa-surface) 82%, var(--iwfsa-background)), var(--iwfsa-background)); color: var(--iwfsa-text); font-family: ${brand.typography.fontFamily}; }
 body.page-public-home, body.page-sign-in { background: linear-gradient(180deg, var(--iwfsa-home-bg-top) 0%, var(--iwfsa-home-bg-mid) 50%, var(--iwfsa-home-bg-bottom) 100%); color: var(--iwfsa-home-ink); min-height: 100vh; }
 main { max-width: 72rem; margin: 0 auto; padding: 1.25rem 1rem 4rem; }
 .landing-main { max-width: none; padding: 0; }
@@ -396,7 +396,7 @@ main { max-width: 72rem; margin: 0 auto; padding: 1.25rem 1rem 4rem; }
 .shell-single { grid-template-columns: minmax(0, 1fr); }
 .shell-content { padding: 1rem; }
 .eyebrow { color: var(--iwfsa-primary); font-size: ${brand.typography.scale.sm}; font-weight: 800; letter-spacing: 0; text-transform: uppercase; }
-h1 { color: var(--iwfsa-primary); font-size: ${brand.typography.scale.xxl}; margin: 0.5rem 0 1rem; line-height: 1.12; }
+h1 { color: var(--iwfsa-primary); font-size: ${brand.typography.scale.xxl}; margin: 0.5rem 0 1rem; line-height: 1.12; overflow-wrap: anywhere; }
 h2 { color: var(--iwfsa-primary); font-size: ${brand.typography.scale.lg}; margin: 0 0 0.6rem; line-height: 1.2; }
 p, li { color: var(--iwfsa-muted-text); line-height: 1.6; }
 ul { padding-left: 1.2rem; }
@@ -438,7 +438,7 @@ form { margin-top: 1.2rem; }
 .landing-pillars { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.8rem; padding: 0; list-style: none; }
 .landing-pillars li { background: var(--iwfsa-surface); border-left: 0.25rem solid var(--iwfsa-secondary); border-radius: 0.45rem; padding: 0.85rem; color: var(--iwfsa-text); font-weight: 700; }
 .story-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
-.story-card { border: 1px solid color-mix(in srgb, var(--iwfsa-primary) 14%, transparent); border-radius: 0.5rem; overflow: hidden; background: var(--iwfsa-background); }
+.story-card { min-width: 0; border: 1px solid color-mix(in srgb, var(--iwfsa-primary) 14%, transparent); border-radius: 0.5rem; overflow: hidden; background: var(--iwfsa-background); }
 .story-card img, .story-portrait { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: var(--iwfsa-surface); }
 .story-card-content { padding: 1rem; }
 .story-card a { color: var(--iwfsa-primary); font-weight: 800; }
@@ -450,12 +450,12 @@ form { margin-top: 1.2rem; }
 .brand-lockup { grid-area: brand; min-width: 0; }
 .brand-link { display: inline-flex; align-items: center; gap: 0.85rem; text-decoration: none; color: inherit; }
 .brand-logo { flex: 0 0 auto; width: 9.25rem; height: auto; display: block; }
-.brand-copy { display: grid; gap: 0.08rem; }
+.brand-copy { display: grid; gap: 0.08rem; min-width: 0; }
 .site-header-shell.is-dense-nav .brand-lockup { width: 100%; }
 .site-header-shell.is-dense-nav .brand-link { display: grid; grid-template-columns: auto minmax(0, 1fr); width: 100%; }
-.brand-title { color: var(--iwfsa-home-ink); font-size: clamp(1.05rem, 2vw, 1.42rem); font-weight: 800; line-height: 1.05; }
+.brand-title { color: var(--iwfsa-home-ink); font-size: clamp(1.05rem, 2vw, 1.42rem); font-weight: 800; line-height: 1.05; overflow-wrap: anywhere; }
 .brand-subtitle { color: var(--iwfsa-home-ink-soft); line-height: 1.5; }
-.header-mission { grid-area: mission; max-width: 31rem; margin: 0.1rem 0 0; color: var(--iwfsa-home-ink-soft); font-size: clamp(0.9rem, 1.1vw, 1.02rem); font-weight: 700; line-height: 1.38; }
+.header-mission { grid-area: mission; max-width: 31rem; margin: 0.1rem 0 0; color: var(--iwfsa-home-ink-soft); font-size: clamp(0.9rem, 1.1vw, 1.02rem); font-weight: 700; line-height: 1.38; overflow-wrap: anywhere; }
 .site-header-actions { grid-area: nav; justify-self: end; display: inline-flex; align-items: center; gap: 0.45rem; width: fit-content; }
 .site-nav { grid-area: nav; justify-self: end; display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.45rem; }
 .site-header-shell.is-dense-nav .header-mission, .site-header-shell.is-dense-nav .site-nav { max-width: none; }
@@ -563,15 +563,22 @@ form { margin-top: 1.2rem; }
 @media (max-width: 760px) {
   main { padding-inline: 0.8rem; }
   .shell, .landing-band, .story-grid { grid-template-columns: 1fr; }
+  .shell { padding: 0.75rem; }
+  .shell-content { padding: 0.45rem; }
+  .shell-content > p { max-width: 20rem; }
+  h1 { font-size: ${brand.typography.scale.xl}; }
   .landing-hero { min-height: 82svh; padding-top: 4rem; }
   .hero-collage { grid-template-columns: repeat(2, 1fr); }
   .landing-pillars { grid-template-columns: 1fr; }
-  .site-header-shell { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "brand nav" "mission mission"; align-items: start; gap: 0.75rem 0.85rem; }
-  .brand-logo { width: 7.2rem; }
+  .site-header-shell { width: calc(100% - 2rem); grid-template-columns: minmax(0, 1fr); grid-template-areas: "brand" "mission" "nav"; align-items: start; gap: 0.75rem; }
+  .v1-page-shell { width: calc(100% - 1rem); }
+  .brand-link { display: grid; grid-template-columns: 4.8rem minmax(0, 1fr); gap: 0.5rem; width: 100%; }
+  .brand-logo { width: 4.8rem; }
+  .brand-title { max-width: 13rem; font-size: 0.95rem; line-height: 1.1; }
   .brand-subtitle { display: none; }
-  .header-mission { max-width: none; font-size: 1rem; line-height: 1.35; }
-  .site-nav { justify-self: end; }
-  .site-nav a, .site-nav button { min-width: 5.8rem; min-height: 2.45rem; padding: 0.5rem 0.85rem; }
+  .header-mission { max-width: 22rem; font-size: 0.95rem; line-height: 1.35; }
+  .site-nav { justify-self: stretch; width: 100%; }
+  .site-nav a, .site-nav button { flex: 1 1 7.5rem; min-width: 0; min-height: 2.45rem; padding: 0.5rem 0.7rem; }
   .v1-public-hero { grid-template-columns: 1fr; gap: 1rem; min-height: 0; }
   .v1-hero-copy { width: 100%; margin-left: 0; margin-bottom: 0.4rem; text-align: left; }
   .v1-featured-figure { grid-column: 1; grid-row: auto; }

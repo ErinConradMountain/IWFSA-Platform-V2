@@ -291,3 +291,13 @@
 **Test References:** `npm run test`, `npm run design:smoke`, `npm run ux:check`, browser route checks, public tunnel session checks.
 
 **Status:** Accepted.
+
+## 2026-05-07 - Hosted Preview Protection Boundary
+
+**Decision:** Keep the Cloudflare quick tunnel as the current public reviewer link and keep the Vercel reviewer-pilot project protected by SSO until the serverless module-packaging issue is resolved.
+
+**Rationale:** Vercel project creation and deployment scaffolding are useful for the durable preview path, but the custom serverless wrapper currently fails at runtime because `@iwfsa/common` is not packaged as a resolvable hosted module. One intermediate Vercel deployment also served static source before the route configuration was corrected, so Vercel SSO protection is required until the hosted entrypoint is clean.
+
+**Test References:** Vercel CLI deploy logs, `vercel project protection`, public tunnel HTTP session checks.
+
+**Status:** Accepted.

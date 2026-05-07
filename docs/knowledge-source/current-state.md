@@ -60,3 +60,16 @@ Current implementation baseline:
 - A temporary Cloudflare quick tunnel can expose the local web service for external review while the app continues to use the local API service behind the server-rendered web layer.
 
 Open next step: convert the temporary tunnel into a durable preview deployment path once the server entrypoint and environment model are ready for hosted execution.
+
+## 2026-05-07 - Reviewer Feedback And Hosted Preview Status
+
+The reviewer handoff now includes `docs/admin-reviewer-feedback-checklist.md` for structured admin, member, and public-surface feedback.
+
+Current hosted-preview status:
+
+- The public reviewer link remains the Cloudflare quick tunnel to the local web service.
+- The Vercel project `iwfsa-platform-v2-reviewer-pilot` has been created and linked for future preview deployment work.
+- Vercel SSO protection is enabled because the current custom serverless wrapper still returns a runtime module-resolution error for `@iwfsa/common` in the hosted function package.
+- The mobile browser pass found and fixed small-screen header and public-gallery wrapping defects.
+
+Open next step: turn the Vercel wrapper into a production-grade hosted entrypoint by packaging `apps/common` as a resolvable runtime module or moving the deployment target to a platform that can run the existing two-service Node preview directly.

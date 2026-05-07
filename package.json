@@ -13,6 +13,9 @@
     "apps/api",
     "apps/web"
   ],
+  "dependencies": {
+    "@iwfsa/common": "file:apps/common"
+  },
   "scripts": {
     "dev:api": "node --experimental-strip-types apps/api/src/index.ts",
     "dev:web": "node --experimental-strip-types apps/web/src/index.ts",
@@ -35,9 +38,11 @@
     "supply-chain:check": "node scripts/supply-chain-check.mjs",
     "sbom": "node scripts/generate-sbom.mjs",
     "ci": "node scripts/ci.mjs",
-    "workspaces:link": "node scripts/link-workspaces.mjs"
+    "workspaces:link": "node scripts/link-workspaces.mjs",
+    "postinstall": "node scripts/link-workspaces.mjs"
   },
   "devDependencies": {
+    "@types/node": "^24.0.0",
     "typescript": "^5.9.0"
   }
 }
