@@ -271,3 +271,13 @@
 **Evidence:** In-app browser sign-in now reaches `/admin` and `/member/dashboard`; `npm run test`, `npm run design:smoke`, and clean detached-worktree `npm run ci` passed after the fix.
 
 **Status:** Accepted.
+
+## 2026-05-07 - Admin Preparation Routes Surface Mapping
+
+**Decision:** Add the existing admin preparation surfaces `/admin/public-review`, `/admin/audit`, and `/admin/support-notes` to `docs/surface-navigation-map.md` using their existing policy task IDs.
+
+**Rationale:** The web surface already renders these admin-only preparation routes and the shared policy matrix already contains the task IDs. Recording them in the surface map closes the Phase 2 control gap so design smoke coverage can verify route-shell navigation, primary-action targets, and fallback behavior without treating unmapped admin routes as real business workflows.
+
+**Test References:** `npm run design:smoke`, `P10-E2E-001`.
+
+**Status:** Accepted.

@@ -34,3 +34,15 @@ The remaining designer guidance documents are enforceable handoff references and
 - `docs/member-section-visual-design-brief.md`
 
 These files define design scope, page-level handoff checks, mobile/accessibility expectations, visual quality bars, token usage, surface separation, and member/admin dignity constraints. They do not change route policy, data, authentication, or workflow logic.
+
+## 2026-05-07 - Route Shell Navigation Smoke Baseline
+
+Authenticated member/admin route-shell smoke coverage now checks surface-scoped navigation and verifies that each rendered primary action stays inside the expected surface and resolves to an implemented governed route.
+
+Current implementation baseline:
+
+- Public landing tests now expect public-only site navigation with Home and Sign in links, while still blocking member/admin links.
+- Admin preparation routes `/admin/public-review`, `/admin/audit`, and `/admin/support-notes` are recorded in `docs/surface-navigation-map.md` with their existing policy task IDs.
+- The public-review preparation page uses a review-checklist primary action rather than a future approval route that has not been implemented as a governed workflow.
+
+Open next step: complete the browser E2E sweep from `docs/design-handoff-integration-plan.md` after the working tree is clean enough for the provenance gate to pass.

@@ -69,6 +69,26 @@ async function checkRoute(baseUrl, cookie, route, input) {
     throw new Error(`${route} has ${primaryActions} primary actions`);
   }
 
+  const navSurface = html.match(/data-surface-nav="([^"]+)"/)?.[1];
+  if (input.navSurface && navSurface !== input.navSurface) {
+    throw new Error(`${route} rendered ${navSurface || "no"} navigation instead of ${input.navSurface}`);
+  }
+
+  const primaryActionHref = html.match(/data-primary-action="true" href="([^"]+)"/)?.[1];
+  if (primaryActionHref) {
+    if (!primaryActionHref.startsWith(input.allowedPrimaryActionPrefix)) {
+      throw new Error(`${route} primary action points outside ${input.allowedPrimaryActionPrefix}: ${primaryActionHref}`);
+    }
+
+    const target = await fetch(`${baseUrl}${primaryActionHref}`, {
+      headers: { cookie },
+      redirect: "manual"
+    });
+    if (target.status !== 200) {
+      throw new Error(`${route} primary action target ${primaryActionHref} returned ${target.status}`);
+    }
+  }
+
   return { route, primaryActions };
 }
 
@@ -120,7 +140,9 @@ try {
   ]) {
     results.push(await checkRoute(webBaseUrl, memberCookie, route, {
       mustContain,
-      mustNotContain: ['href="/admin', "bad standing", "failed member"]
+      mustNotContain: ['href="/admin', "bad standing", "failed member"],
+      navSurface: "member",
+      allowedPrimaryActionPrefix: "/member"
     }));
   }
 
@@ -128,11 +150,13 @@ try {
     ["/admin", ["Admin stewardship console", "Review imports"]],
     ["/admin/members", ["Member stewardship", "Create temporary member", "Clean Slate remains separated"]],
     ["/admin/import/preview", ["Import preview stewardship", "No live mutation", "Review flagged rows"]],
-    ["/admin/public-review", ["Public profile review", "Approval checklist", "Approve public profile"]]
+    ["/admin/public-review", ["Public profile review", "Approval checklist", "Review approval checklist"]]
   ]) {
     results.push(await checkRoute(webBaseUrl, adminCookie, route, {
       mustContain,
-      mustNotContain: ['href="/member']
+      mustNotContain: ['href="/member'],
+      navSurface: "admin",
+      allowedPrimaryActionPrefix: "/admin"
     }));
   }
 

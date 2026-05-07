@@ -168,8 +168,12 @@ test("web public landing renders V1 home visual entrance", async () => {
     assert.equal((body.match(/data-primary-action="true"/g) || []).length, 1);
     assert.match(body, /A professional home for accomplished women/);
     assert.match(body, /strengthens ethical leadership and meaningful impact/);
+    assert.match(body, /data-surface-nav="public"/);
+    assert.match(body, /<a href="\/" aria-current="page">Home<\/a>/);
+    assert.match(body, /<a href="\/signin" data-primary-action="true">Sign in<\/a>/);
     assert.doesNotMatch(body, /View approved stories/);
-    assert.doesNotMatch(body, />Home<\/a>/);
+    assert.doesNotMatch(body, /href="\/member/);
+    assert.doesNotMatch(body, /href="\/admin/);
     assert.doesNotMatch(body, /Purposeful programmes|Mentoring and connection/);
   });
 });

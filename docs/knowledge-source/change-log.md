@@ -1,5 +1,20 @@
 # Change Log
 
+## 2026-05-07 - Strengthened Route-Shell Smoke Coverage
+
+- Updated the public landing test to align with centralized public site navigation while preserving public/member/admin separation checks.
+- Added primary-action target and navigation-surface checks to `npm run design:smoke`.
+- Mapped the existing admin preparation routes in `docs/surface-navigation-map.md`.
+- Recorded the admin preparation route mapping decision in `decision-log.md`.
+
+Verification recorded for this slice:
+
+- `node --experimental-strip-types scripts/run-tests.mjs`
+- `node --experimental-strip-types scripts/design-route-smoke.mjs`
+- `node scripts/docs-control-check.mjs`
+- `node scripts/ux-brand-check.mjs`
+- `node scripts/ci.mjs` through supply-chain checks; final provenance check remains blocked because the tracked working tree is dirty.
+
 ## 2026-05-06 - Integrated Server-Rendered Design Helpers And Route Smoke Coverage
 
 - Cleaned and staged the `Webpages` handoff pack as page-sheet and visual-prototype reference material.

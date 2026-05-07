@@ -51,6 +51,9 @@ This file is the source of truth for Phase 2 route generation, policy checks, ta
 | `/admin/import/commit` | `admin.import.commit` | Commit reviewed import | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
 | `/admin/imports` | `admin.import.commit` | Import commit | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
 | `/admin/standing` | `admin.standing.manage` | Manage standing | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
+| `/admin/public-review` | `admin.public-review.queue` | Review approval-gated public profile projections | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on`, consent, standing, visibility, approval checklist | `/` |
+| `/admin/audit` | `admin.audit.read` | Review redacted audit trail readiness | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on`, no raw PII, no tokens, no cookies | `/` |
+| `/admin/support-notes` | `admin.support-notes.add` | Prepare admin-only support note surface | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on`, redacted compact views | `/` |
 | `/admin/members/clean-slate` | `admin.members.clean_slate` | Clear temporary seed members before production setup | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |
 | `/api/admin/members/clean-slate` | `admin.members.clean_slate` | Execute temporary seed member cleanup | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on`, CSRF token | `/` |
 | `/admin/events` | `admin.events.manage` | Manage temporary event records | `role=admin/chief_admin`, `surface=admin`, `standing=active`, `audit_trail=on` | `/` |

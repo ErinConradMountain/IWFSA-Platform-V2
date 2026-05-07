@@ -77,6 +77,7 @@ type AdminEventView = {
 
 const LEGACY_ASSET_ROOT = join(process.cwd(), "apps", "web", "public", "legacy-assets");
 const LEGACY_SEED_MEMBER_PATH = join(process.cwd(), "seed", "legacy-members.json");
+const BRAND_CSS_VERSION = "2026-05-06-header-actions";
 const LEGACY_MEMBER_IMAGES = [
   "/legacy-assets/member-portrait-ayanda.svg",
   "/legacy-assets/member-portrait-lerato.svg",
@@ -373,6 +374,7 @@ body.page-public-home, body.page-sign-in { background: linear-gradient(180deg, v
 main { max-width: 72rem; margin: 0 auto; padding: 1.25rem 1rem 4rem; }
 .landing-main { max-width: none; padding: 0; }
 .shell { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(18rem, 0.65fr); gap: 2rem; align-items: stretch; background: var(--iwfsa-background); border: 1px solid color-mix(in srgb, var(--iwfsa-primary) 14%, transparent); border-radius: 0.5rem; padding: 1.25rem; box-shadow: 0 1.25rem 3rem color-mix(in srgb, var(--iwfsa-primary) 12%, transparent); }
+.shell-single { grid-template-columns: minmax(0, 1fr); }
 .shell-content { padding: 1rem; }
 .eyebrow { color: var(--iwfsa-primary); font-size: ${brand.typography.scale.sm}; font-weight: 800; letter-spacing: 0; text-transform: uppercase; }
 h1 { color: var(--iwfsa-primary); font-size: ${brand.typography.scale.xxl}; margin: 0.5rem 0 1rem; line-height: 1.12; }
@@ -401,12 +403,6 @@ form { margin-top: 1.2rem; }
 .info-callout strong { display: block; color: var(--iwfsa-primary); margin-bottom: 0.25rem; }
 .info-callout p { margin: 0; color: var(--iwfsa-text); }
 .audit-preview { color: var(--iwfsa-audit); font-weight: 700; }
-.visual-panel { position: relative; overflow: hidden; min-height: 22rem; border-radius: 0.5rem; background: linear-gradient(145deg, color-mix(in srgb, var(--iwfsa-primary) 92%, var(--iwfsa-text)), color-mix(in srgb, var(--iwfsa-primary) 70%, var(--iwfsa-secondary))); color: var(--iwfsa-background); }
-.visual-panel::after { content: ""; position: absolute; inset: auto 0 0; height: 34%; background: linear-gradient(0deg, color-mix(in srgb, var(--iwfsa-primary) 76%, transparent), transparent); }
-.visual-panel .logo-mark { position: absolute; top: 1rem; left: 1rem; width: 4.5rem; height: 4.5rem; object-fit: contain; border-radius: 50%; background: var(--iwfsa-background); padding: 0.45rem; box-shadow: 0 0.8rem 1.8rem color-mix(in srgb, var(--iwfsa-text) 22%, transparent); z-index: 2; }
-.portrait-stack { position: absolute; inset: 4.2rem 1rem 1rem; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; align-items: stretch; }
-.portrait-stack img { width: 100%; height: 100%; min-height: 7.5rem; object-fit: cover; border-radius: 0.45rem; background: color-mix(in srgb, var(--iwfsa-background) 92%, var(--iwfsa-secondary)); border: 1px solid color-mix(in srgb, var(--iwfsa-background) 65%, transparent); }
-.portrait-stack img:nth-child(2), .portrait-stack img:nth-child(3) { transform: translateY(1.1rem); }
 .landing-hero { position: relative; min-height: 78svh; overflow: hidden; display: grid; align-items: center; padding: 5rem max(1rem, calc((100vw - 72rem) / 2)) 4rem; background: var(--iwfsa-primary); }
 .landing-hero::before { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, color-mix(in srgb, var(--iwfsa-primary) 94%, var(--iwfsa-text)), color-mix(in srgb, var(--iwfsa-primary) 72%, transparent) 48%, color-mix(in srgb, var(--iwfsa-primary) 22%, transparent)); z-index: 1; }
 .hero-collage { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(4, 1fr); opacity: 0.72; }
@@ -431,16 +427,25 @@ form { margin-top: 1.2rem; }
 .skip-link:focus-visible { top: 1rem; }
 .site-header { position: sticky; top: 0; z-index: 30; padding: 0.75rem 0 0.65rem; backdrop-filter: blur(20px); background: color-mix(in srgb, var(--iwfsa-home-panel-warm) 84%, transparent); border-bottom: 1px solid color-mix(in srgb, var(--iwfsa-home-ink) 8%, transparent); }
 .site-header-shell { width: min(1100px, 92%); margin: 0 auto; display: grid; grid-template-columns: minmax(25rem, 1fr) minmax(20rem, 0.78fr) auto; grid-template-areas: "brand mission nav"; align-items: start; gap: 0.65rem 1.55rem; }
+.site-header-shell.is-dense-nav { position: relative; display: flex; flex-direction: column; align-items: stretch; gap: 0.85rem; padding-top: 3.4rem; }
 .brand-lockup { grid-area: brand; min-width: 0; }
 .brand-link { display: inline-flex; align-items: center; gap: 0.85rem; text-decoration: none; color: inherit; }
 .brand-logo { flex: 0 0 auto; width: 9.25rem; height: auto; display: block; }
 .brand-copy { display: grid; gap: 0.08rem; }
+.site-header-shell.is-dense-nav .brand-lockup { width: 100%; }
+.site-header-shell.is-dense-nav .brand-link { display: grid; grid-template-columns: auto minmax(0, 1fr); width: 100%; }
 .brand-title { color: var(--iwfsa-home-ink); font-size: clamp(1.05rem, 2vw, 1.42rem); font-weight: 800; line-height: 1.05; }
 .brand-subtitle { color: var(--iwfsa-home-ink-soft); line-height: 1.5; }
 .header-mission { grid-area: mission; max-width: 31rem; margin: 0.1rem 0 0; color: var(--iwfsa-home-ink-soft); font-size: clamp(0.9rem, 1.1vw, 1.02rem); font-weight: 700; line-height: 1.38; }
+.site-header-actions { grid-area: nav; justify-self: end; display: inline-flex; align-items: center; gap: 0.45rem; width: fit-content; }
 .site-nav { grid-area: nav; justify-self: end; display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.45rem; }
-.site-nav a { display: inline-flex; align-items: center; justify-content: center; min-width: 6.8rem; min-height: 3rem; color: var(--iwfsa-background); text-decoration: none; white-space: nowrap; background: linear-gradient(135deg, var(--iwfsa-home-accent), color-mix(in srgb, var(--iwfsa-home-accent-dark) 70%, var(--iwfsa-home-accent-warm))); border: 1px solid color-mix(in srgb, var(--iwfsa-home-accent-dark) 36%, transparent); border-radius: 999px; padding: 0.62rem 1.18rem; font-size: 1rem; line-height: 1; font-weight: 800; box-shadow: 0 8px 18px color-mix(in srgb, var(--iwfsa-home-accent-dark) 16%, transparent); transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease, color 180ms ease; }
-.site-nav a:hover, .site-nav a:focus-visible { transform: translateY(-1px); background: linear-gradient(135deg, color-mix(in srgb, var(--iwfsa-home-accent-dark) 72%, var(--iwfsa-home-accent)), var(--iwfsa-home-accent-dark)); box-shadow: 0 11px 22px color-mix(in srgb, var(--iwfsa-home-accent-dark) 22%, transparent); }
+.site-header-shell.is-dense-nav .header-mission, .site-header-shell.is-dense-nav .site-nav { max-width: none; }
+.site-header-shell.is-dense-nav .site-nav { justify-self: auto; }
+.site-header-shell.is-dense-nav .site-header-actions { position: absolute; top: 0; right: 0; align-self: auto; justify-self: auto; margin-left: 0; order: 0; width: auto; }
+.site-nav a, .site-nav button { display: inline-flex; align-items: center; justify-content: center; min-width: 6.8rem; min-height: 3rem; color: var(--iwfsa-background); text-decoration: none; white-space: nowrap; background: linear-gradient(135deg, var(--iwfsa-home-accent), color-mix(in srgb, var(--iwfsa-home-accent-dark) 70%, var(--iwfsa-home-accent-warm))); border: 1px solid color-mix(in srgb, var(--iwfsa-home-accent-dark) 36%, transparent); border-radius: 999px; padding: 0.62rem 1.18rem; font-size: 1rem; line-height: 1; font-weight: 800; box-shadow: 0 8px 18px color-mix(in srgb, var(--iwfsa-home-accent-dark) 16%, transparent); transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease, color 180ms ease; }
+.site-nav a:hover, .site-nav a:focus-visible, .site-nav button:hover, .site-nav button:focus-visible { transform: translateY(-1px); background: linear-gradient(135deg, color-mix(in srgb, var(--iwfsa-home-accent-dark) 72%, var(--iwfsa-home-accent)), var(--iwfsa-home-accent-dark)); box-shadow: 0 11px 22px color-mix(in srgb, var(--iwfsa-home-accent-dark) 22%, transparent); }
+.site-nav form, .site-header-actions form { margin: 0; }
+.site-nav button { cursor: pointer; font: inherit; }
 .v1-page-shell { width: min(1100px, 92%); max-width: none; margin: 0 auto; padding: 0 0 2rem; }
 .v1-panel { border: 1px solid color-mix(in srgb, var(--iwfsa-home-ink) 16%, transparent); border-radius: 14px; background: color-mix(in srgb, var(--iwfsa-home-panel) 92%, transparent); box-shadow: 0 22px 56px color-mix(in srgb, var(--iwfsa-home-ink) 13%, transparent); backdrop-filter: blur(18px); }
 .v1-public-hero { position: relative; width: 100vw; margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw); border-left: 0; border-right: 0; border-radius: 0; background: radial-gradient(circle at 18% 22%, color-mix(in srgb, var(--iwfsa-home-accent-warm) 18%, transparent), transparent 18%), radial-gradient(circle at 84% 18%, color-mix(in srgb, var(--iwfsa-primary) 24%, transparent), transparent 22%), linear-gradient(135deg, var(--iwfsa-home-hero-ink) 0%, var(--iwfsa-home-hero-mid) 52%, var(--iwfsa-home-hero-deep) 100%); box-shadow: none; overflow: hidden; display: grid; grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.18fr); grid-template-rows: auto 1fr; gap: clamp(1.25rem, 2.4vw, 2rem); align-items: stretch; padding: clamp(1.2rem, 2.2vw, 1.7rem); }
@@ -522,7 +527,6 @@ form { margin-top: 1.2rem; }
 @media (max-width: 760px) {
   main { padding-inline: 0.8rem; }
   .shell, .landing-band, .story-grid { grid-template-columns: 1fr; }
-  .visual-panel { min-height: 18rem; order: -1; }
   .landing-hero { min-height: 82svh; padding-top: 4rem; }
   .hero-collage { grid-template-columns: repeat(2, 1fr); }
   .landing-pillars { grid-template-columns: 1fr; }
@@ -531,7 +535,7 @@ form { margin-top: 1.2rem; }
   .brand-subtitle { display: none; }
   .header-mission { max-width: none; font-size: 1rem; line-height: 1.35; }
   .site-nav { justify-self: end; }
-  .site-nav a { min-width: 5.8rem; min-height: 2.45rem; padding: 0.5rem 0.85rem; }
+  .site-nav a, .site-nav button { min-width: 5.8rem; min-height: 2.45rem; padding: 0.5rem 0.85rem; }
   .v1-public-hero { grid-template-columns: 1fr; gap: 1rem; min-height: 0; }
   .v1-hero-copy { width: 100%; margin-left: 0; margin-bottom: 0.4rem; text-align: left; }
   .v1-featured-figure { grid-column: 1; grid-row: auto; }
@@ -551,53 +555,34 @@ form { margin-top: 1.2rem; }
 }
 
 function renderPage(title: string, body: string): string {
-  return `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>${escapeHtml(title)}</title>
-    <link rel="stylesheet" href="/brand.css" />
-  </head>
-  <body>
-    <main>${body}</main>
-  </body>
-</html>`;
+  return renderSiteChrome({ title, body, surface: "public" });
 }
 
-function renderPublicPage(title: string, body: string, robots = "index, follow"): string {
-  return `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="robots" content="${escapeHtml(robots)}" />
-    <title>${escapeHtml(title)}</title>
-    <link rel="stylesheet" href="/brand.css" />
-  </head>
-  <body>
-    <main>${body}</main>
-  </body>
-</html>`;
+function navigationSurfaceForSession(session: Pick<WebAuthSession, "isAuthenticated" | "role">): NavSurface {
+  if (!session.isAuthenticated) {
+    return "public";
+  }
+
+  return session.role === "member" ? "member" : "admin";
 }
 
-function renderV1PublicChrome(input: { title: string; body: string; pageClass: string; currentPath: "/" | "/signin" }): string {
-  const signInAttributes = input.currentPath === "/" ? ` data-primary-action="true"` : input.currentPath === "/signin" ? ` aria-current="page"` : "";
-  const navLinks = `<a href="/signin"${signInAttributes}>Sign in</a>`;
+function renderSiteHeader(input: { surface: NavSurface; currentPath?: string; includeSignOut?: boolean }): string {
+  const links: Record<NavSurface, Array<[string, string]>> = {
+    public: [["/", "Home"], ["/signin", "Sign in"]],
+    member: [["/", "Home"], ["/member/dashboard", "Dashboard"], ["/member/profile", "Profile"], ["/member/events", "Events"], ["/member/directory", "Directory"], ["/member/notifications", "Notifications"]],
+    admin: [["/", "Home"], ["/admin", "Console"], ["/admin/events", "Events"], ["/admin/members", "Members"], ["/admin/imports", "Imports"], ["/admin/standing", "Standing"]]
+  };
 
-  return `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="robots" content="index, follow" />
-    <title>${escapeHtml(input.title)}</title>
-    <link rel="stylesheet" href="/brand.css" />
-  </head>
-  <body class="${escapeHtml(input.pageClass)}">
-    <a class="skip-link" href="#main-content">Skip to content</a>
-    <header class="site-header">
-      <div class="site-header-shell">
+  const navLinks = links[input.surface].map(([href, label]) => {
+    const current = input.currentPath === href ? ' aria-current="page"' : "";
+    const primary = input.surface === "public" && href === "/signin" && input.currentPath === "/" ? ' data-primary-action="true"' : "";
+    return `<a href="${href}"${current}${primary}>${escapeHtml(label)}</a>`;
+  }).join("");
+  const signOut = input.includeSignOut ? `<div class="site-header-actions"><form method="post" action="/signout"><button type="submit">Sign out</button></form></div>` : "";
+  const shellClass = input.surface === "public" ? "site-header-shell" : "site-header-shell is-dense-nav";
+
+  return `<header class="site-header">
+      <div class="${shellClass}">
         <div class="brand-lockup">
           <a class="brand-link" href="/">
             <img class="brand-logo" src="/legacy-assets/iwfsa-logo.svg" alt="International Women's Forum South Africa" />
@@ -608,22 +593,55 @@ function renderV1PublicChrome(input: { title: string; body: string; pageClass: s
             </span>
           </a>
         </div>
+        ${signOut}
         <p class="header-mission">Advancing women leaders through connection, mentoring, leadership development, and a trusted national forum that strengthens ethical leadership and meaningful impact across South Africa.</p>
-        <nav class="site-nav" aria-label="Primary" data-surface-nav="public">${navLinks}</nav>
+        <nav class="site-nav" aria-label="Primary" data-surface-nav="${input.surface}">${navLinks}</nav>
       </div>
-    </header>
-    <main id="main-content" class="v1-page-shell">
-      ${input.body}
-    </main>
+    </header>`;
+}
+
+function renderSiteChrome(input: { title: string; body: string; surface: NavSurface; robots?: string; pageClass?: string; currentPath?: string; includeSignOut?: boolean }): string {
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    ${input.robots ? `<meta name="robots" content="${escapeHtml(input.robots)}" />` : ""}
+    <title>${escapeHtml(input.title)}</title>
+    <link rel="stylesheet" href="/brand.css?v=${BRAND_CSS_VERSION}" />
+  </head>
+  <body${input.pageClass ? ` class="${escapeHtml(input.pageClass)}"` : ""}>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    ${renderSiteHeader({ surface: input.surface, currentPath: input.currentPath, includeSignOut: input.includeSignOut })}
+    <main id="main-content" class="v1-page-shell">${input.body}</main>
   </body>
 </html>`;
 }
 
-function renderLandingPage(): string {
+function renderPublicPage(title: string, body: string, robots = "index, follow"): string {
+  return renderSiteChrome({ title, body, robots, surface: "public" });
+}
+
+function renderV1PublicChrome(input: { title: string; body: string; pageClass: string; currentPath: "/" | "/signin"; headerSurface?: NavSurface; includeSignOut?: boolean }): string {
+  return renderSiteChrome({
+    title: input.title,
+    body: input.body,
+    robots: "index, follow",
+    surface: input.headerSurface || "public",
+    pageClass: input.pageClass,
+    currentPath: input.currentPath,
+    includeSignOut: input.includeSignOut
+  });
+}
+
+function renderLandingPage(input: { currentSession?: Pick<WebAuthSession, "isAuthenticated" | "role"> } = {}): string {
+  const headerSurface = navigationSurfaceForSession(input.currentSession || { isAuthenticated: false, role: null });
   return renderV1PublicChrome({
     title: "IWFSA | Public",
     currentPath: "/",
     pageClass: "page-public-home",
+    headerSurface,
+    includeSignOut: headerSurface !== "public",
     body: `
       <section class="v1-panel v1-public-hero" data-route-surface="public">
         <div class="v1-hero-copy">
@@ -651,16 +669,6 @@ function renderLandingPage(): string {
   });
 }
 
-function renderSurfaceNav(surface: NavSurface): string {
-  const links: Record<NavSurface, Array<[string, string]>> = {
-    public: [["/", "Home"], ["/signin", "Sign in"]],
-    member: [["/member/dashboard", "Dashboard"], ["/member/profile", "Profile"], ["/member/events", "Events"], ["/member/directory", "Directory"], ["/member/notifications", "Notifications"]],
-    admin: [["/admin", "Console"], ["/admin/events", "Events"], ["/admin/members", "Members"], ["/admin/imports", "Imports"], ["/admin/standing", "Standing"], ["/admin/members/clean-slate", "Seed Members"], ["/admin/public-review", "Review Queue"], ["/admin/audit", "Audit"], ["/admin/support-notes", "Support Notes"]]
-  };
-
-  return `<nav class="surface-nav" data-surface-nav="${surface}">${links[surface].map(([href, label]) => `<a href="${href}">${escapeHtml(label)}</a>`).join("")}</nav>`;
-}
-
 function renderShell(input: {
   title: string;
   eyebrow: string;
@@ -668,6 +676,8 @@ function renderShell(input: {
   summary: string;
   items: string[];
   surface: NavSurface;
+  currentPath?: string;
+  includeSignOut?: boolean;
   primaryAction?: { href: string; label: string };
   extra?: string;
 }): string {
@@ -675,10 +685,12 @@ function renderShell(input: {
   const primaryAction = input.primaryAction
     ? `<a class="primary-action" data-primary-action="true" href="${input.primaryAction.href}">${escapeHtml(input.primaryAction.label)}</a>`
     : "";
-  const portraitStack = LEGACY_MEMBER_IMAGES.map((src) => `<img src="${src}" alt="" loading="lazy" />`).join("");
-  return renderPage(
-    input.title,
-    `<section class="shell" data-route-surface="${input.surface}">
+  return renderSiteChrome({
+    title: input.title,
+    surface: input.surface,
+    currentPath: input.currentPath,
+    includeSignOut: input.includeSignOut ?? input.surface !== "public",
+    body: `<section class="shell shell-single" data-route-surface="${input.surface}">
       <div class="shell-content">
         <div class="eyebrow">${escapeHtml(input.eyebrow)}</div>
         <h1>${escapeHtml(input.heading)}</h1>
@@ -686,14 +698,9 @@ function renderShell(input: {
         <ul>${list}</ul>
         ${primaryAction}
         ${input.extra || ""}
-        ${renderSurfaceNav(input.surface)}
       </div>
-      <aside class="visual-panel" aria-hidden="true">
-        <img class="logo-mark" src="/legacy-assets/iwfsa-logo.jpg" alt="" loading="lazy" />
-        <div class="portrait-stack">${portraitStack}</div>
-      </aside>
     </section>`
-  );
+  });
 }
 
 function renderPrototypeNote(kind: "profile" | "import" | "approval"): string {
@@ -979,7 +986,7 @@ function renderAdminPublicReviewPage(): string {
     summary: "Approve public-safe profile projections only after consent, standing, visibility, allowlist, and audit checks pass.",
     items: ["Hidden, private, and members-only fields are absent from the preview and DOM.", "Approval creates an audit-labelled event.", "Blocked profiles show safe reasons without exposing private content."],
     surface: "admin",
-    primaryAction: { href: "/admin/public-review/approve", label: "Approve public profile" },
+    primaryAction: { href: "/admin/public-review", label: "Review approval checklist" },
     extra: `${renderPrototypeNote("approval")}<section class="design-workspace" aria-labelledby="public-review-checklist">
       <h2 id="public-review-checklist">Approval checklist</h2>
       <ul class="compact-list">
@@ -1047,18 +1054,13 @@ function renderPublicGallery(profiles: PublicProfileView[]): string {
 
   return renderPublicPage(
     "Public Gallery",
-    `<section class="shell" data-route-surface="public">
+    `<section class="shell shell-single" data-route-surface="public">
       <div class="shell-content">
         <div class="eyebrow">Public Gallery</div>
         <h1>Approved public stories</h1>
         <p>Only approved public-safe profile fields are rendered here.</p>
         <div class="story-grid">${cards || "<p>No approved public stories are available.</p>"}</div>
-        ${renderSurfaceNav("public")}
       </div>
-      <aside class="visual-panel" aria-hidden="true">
-        <img class="logo-mark" src="/legacy-assets/iwfsa-logo.jpg" alt="" loading="lazy" />
-        <div class="portrait-stack">${LEGACY_MEMBER_IMAGES.map((src) => `<img src="${src}" alt="" loading="lazy" />`).join("")}</div>
-      </aside>
     </section>`
   );
 }
@@ -1071,7 +1073,6 @@ function renderPublicStory(profile: PublicProfileView | null): string {
         <div class="eyebrow">Public Story</div>
         <h1>Story unavailable</h1>
         <p>This story is unavailable or no longer published.</p>
-        ${renderSurfaceNav("public")}
       </section>`,
       "noindex, follow"
     );
@@ -1085,7 +1086,6 @@ function renderPublicStory(profile: PublicProfileView | null): string {
         <h1>${escapeHtml(profile.displayName)}</h1>
         <p>${escapeHtml(profile.biography)}</p>
         <p class="audit-preview">Updated ${escapeHtml(profile.updatedAt)}</p>
-        ${renderSurfaceNav("public")}
       </div>
       <aside class="visual-panel" aria-hidden="true">
         <img class="story-portrait" src="${escapeHtml(profile.publicImage)}" alt="" loading="lazy" />
@@ -1137,11 +1137,12 @@ function renderAuthServiceFailurePage(): string {
 
 function renderSignInPage(input: { currentSession: WebAuthSession; errorMessage?: string }): string {
   const currentSession = input.currentSession;
+  const headerSurface = navigationSurfaceForSession(currentSession);
   const errorBlock = input.errorMessage ? `<p><strong>${escapeHtml(input.errorMessage)}</strong></p>` : "";
-  const signOutForm = currentSession.isAuthenticated ? `<form method="post" action="/signout"><button type="submit">Sign out</button></form>` : "";
-  const signInForm = currentSession.isAuthenticated
-    ? ""
-    : `<form class="v1-sign-in-form" method="post" action="/signin">
+  const sessionNote = currentSession.isAuthenticated
+    ? `<p class="v1-sign-in-status">You are already signed in. Use the form below to switch access or sign out of the current session.</p>`
+    : "";
+  const signInForm = `<form class="v1-sign-in-form" method="post" action="/signin">
         <label for="sign-in-identity">Username</label>
         <input id="sign-in-identity" type="text" name="subject" value="akeida" autocomplete="username" required />
         <label for="sign-in-access-code">Password</label>
@@ -1154,6 +1155,8 @@ function renderSignInPage(input: { currentSession: WebAuthSession; errorMessage?
     title: "IWFSA | Sign In",
     currentPath: "/signin",
     pageClass: "page-sign-in",
+    headerSurface,
+    includeSignOut: headerSurface !== "public",
     body: `
       <section class="v1-sign-in-stage" aria-labelledby="sign-in-title">
         <div class="v1-sign-in-stage-backdrop"></div>
@@ -1168,8 +1171,8 @@ function renderSignInPage(input: { currentSession: WebAuthSession; errorMessage?
           </div>
           <div class="v1-sign-in-card-brand" aria-hidden="true"><span>Member and admin credentials</span></div>
           ${errorBlock}
+          ${sessionNote}
           ${signInForm}
-          ${signOutForm}
         </div>
       </section>`
   });
@@ -1249,7 +1252,7 @@ function renderAdminEventsPage(input: { events: AdminEventView[]; message?: stri
 }
 
 async function loadAuthContext(url: URL, request: http.IncomingMessage, config: ServiceConfig, authGateway: AuthGateway): Promise<WebAuthSession> {
-  const guardedPrefixes = ["/signin", "/member", "/admin"];
+  const guardedPrefixes = ["/", "/signin", "/member", "/admin"];
 
   if (!guardedPrefixes.some((prefix) => url.pathname === prefix || url.pathname.startsWith(`${prefix}/`))) {
     return anonymousContext(config);
@@ -1339,7 +1342,7 @@ export function createWebServer(config: ServiceConfig, dependencies: WebDependen
       sendHtml(
         response,
         200,
-        renderLandingPage()
+        renderLandingPage({ currentSession: authContext })
       );
       return;
     }
