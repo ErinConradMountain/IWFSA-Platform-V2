@@ -22,6 +22,7 @@ This checklist turns operational maturity into release evidence. It must be comp
 - Public: homepage, gallery, story, honorary, memorial, revoked/missing story path.
 - Member: sign-in, dashboard, profile visibility, RSVP, notification preference, sign-out.
 - Admin: import preview/commit, standing fee update, event state change, public approval, broadcast preview, audit lookup by correlation ID.
+- Reviewer pilot: run `npm run reviewer:smoke` to verify the public, member, and admin walkthrough paths through the serverless preview handler before browser sign-off.
 
 ## Design Integration Sweep
 

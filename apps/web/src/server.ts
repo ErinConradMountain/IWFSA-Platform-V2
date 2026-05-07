@@ -172,6 +172,20 @@ function routeForRole(role: string | null): string {
   return role === "member" ? "/member/dashboard" : role === "admin" || role === "chief_admin" ? "/admin" : "/signin";
 }
 
+function publicTaskAllowed(task: TaskId): boolean {
+  const decision = evaluate({
+    role: null,
+    surface: "public",
+    standing: "good",
+    consent: "granted",
+    visibility: "public",
+    approved: true,
+    task
+  });
+
+  return decision.decision === "ALLOW";
+}
+
 function inferLocalRole(input: { explicitRole: string | null; subject: string | null; allowRoleSelfSelection: boolean }): string | null {
   if (input.explicitRole) {
     return input.explicitRole;
@@ -709,6 +723,15 @@ function renderLandingPage(input: { currentSession?: Pick<WebAuthSession, "isAut
         </figure>
         <p class="v1-promo-copy">A professional home for accomplished women to exchange knowledge, mentor future leaders, strengthen networks, and contribute to ethical leadership across sectors.</p>
       </section>
+      <section class="v1-public-highlights" aria-labelledby="public-review-paths">
+        <h2 id="public-review-paths">Public review paths</h2>
+        <div class="v1-highlight-grid">
+          <a class="v1-highlight-card review-route" href="/public/gallery"><h3>Approved stories</h3><p>Review public-safe profile projections only.</p></a>
+          <a class="v1-highlight-card review-route" href="/honoraries"><h3>Honorary members</h3><p>Inspect approved honorary recognition without private details.</p></a>
+          <a class="v1-highlight-card review-route" href="/memorials"><h3>Memorials</h3><p>Check dignity-first memorial framing and consent boundaries.</p></a>
+          <a class="v1-highlight-card review-route" href="/contact"><h3>Contact</h3><p>Confirm public contact guidance does not expose private member records.</p></a>
+        </div>
+      </section>
 `
   });
 }
@@ -1115,7 +1138,15 @@ function renderAdminAuditPage(): string {
     summary: "Review traceable governance activity without exposing raw tokens, cookies, or private member data.",
     items: ["Audit entries show timestamp, task, route, safe record summary, and outcome.", "Exports remain an open governance decision.", "Sensitive internal reasoning stays out of compact list views."],
     surface: "admin",
-    extra: `<section class="design-workspace" aria-labelledby="audit-readiness"><h2 id="audit-readiness">Audit readiness</h2><p class="route-note">This route is prepared as an admin-only review surface for future audit search and filtering.</p></section>`
+    extra: `<section class="design-workspace" aria-labelledby="audit-readiness">
+      <h2 id="audit-readiness">Audit readiness</h2>
+      <p class="route-note">This admin-only review surface frames what audit evidence must prove before production records are connected.</p>
+      <div class="design-grid">
+        <article class="design-panel">${renderStatusBadges([{ label: "Correlation ID", tone: "audit" }])}<h3>Lookup path</h3><p>Reviewers should be able to trace a session, policy denial, import, event, or publication decision by correlation ID.</p></article>
+        <article class="design-panel">${renderStatusBadges([{ label: "Redacted", tone: "private" }])}<h3>Privacy boundary</h3><p>Audit views must not render raw tokens, cookies, passwords, private contact details, or unapproved profile content.</p></article>
+        <article class="design-panel">${renderStatusBadges([{ label: "Admin only", tone: "members" }])}<h3>Governance events</h3><p>Expected evidence includes SESSION_CREATED, SESSION_ROTATED, POLICY_DENY, CSRF_BLOCKED, import, event, standing, and publication actions.</p></article>
+      </div>
+    </section>`
   });
 }
 
@@ -1167,6 +1198,119 @@ function renderPublicGallery(profiles: PublicProfileView[]): string {
         <h1>Approved public stories</h1>
         <p>Only approved public-safe profile fields are rendered here.</p>
         <div class="story-grid">${cards || "<p>No approved public stories are available.</p>"}</div>
+      </div>
+    </section>`
+  );
+}
+
+type PublicRecognitionEntry = {
+  title: string;
+  description: string;
+  note: string;
+};
+
+function renderPublicRecognitionPage(input: {
+  title: string;
+  eyebrow: string;
+  heading: string;
+  summary: string;
+  task: TaskId;
+  emptyState: string;
+  entries: PublicRecognitionEntry[];
+}): string {
+  if (!publicTaskAllowed(input.task)) {
+    return renderPublicPage(
+      `${input.title} unavailable`,
+      `<section class="shell" data-route-surface="public">
+        <div class="eyebrow">${escapeHtml(input.eyebrow)}</div>
+        <h1>${escapeHtml(input.heading)} unavailable</h1>
+        <p>This public content is unavailable until visibility, consent, standing, and approval checks pass.</p>
+      </section>`,
+      "noindex, follow"
+    );
+  }
+
+  const cards = input.entries.length > 0 ? input.entries.map((entry) => `<article class="story-card visibility-public">
+    <div class="story-card-content">
+      ${renderStatusBadges([{ label: "Approved public entry", tone: "public" }, { label: "No private fields", tone: "private" }])}
+      <h2>${escapeHtml(entry.title)}</h2>
+      <p>${escapeHtml(entry.description)}</p>
+      <p class="audit-preview">${escapeHtml(entry.note)}</p>
+    </div>
+  </article>`).join("") : `<article class="story-card visibility-public">
+    <div class="story-card-content">
+      ${renderStatusBadges([{ label: "Approval gated", tone: "audit" }, { label: "No private fields", tone: "private" }])}
+      <h2>No approved records are published yet</h2>
+      <p>${escapeHtml(input.emptyState)}</p>
+      <p class="audit-preview">Public entries appear only after consent, visibility, standing, and approval checks pass.</p>
+    </div>
+  </article>`;
+
+  return renderPublicPage(
+    input.title,
+    `<section class="shell shell-single" data-route-surface="public">
+      <div class="shell-content">
+        <div class="eyebrow">${escapeHtml(input.eyebrow)}</div>
+        <h1>${escapeHtml(input.heading)}</h1>
+        <p>${escapeHtml(input.summary)}</p>
+        <div class="story-grid">${cards}</div>
+      </div>
+    </section>`
+  );
+}
+
+function renderHonorariesPage(): string {
+  return renderPublicRecognitionPage({
+    title: "Honorary Members",
+    eyebrow: "Public Recognition",
+    heading: "Approved honorary members",
+    summary: "Honorary recognition is shown as public-safe, approval-gated storytelling. Private member records, contact details, and internal notes are not rendered.",
+    task: "public.honoraries",
+    emptyState: "No honorary member records are currently published on the public surface.",
+    entries: []
+  });
+}
+
+function renderMemorialsPage(): string {
+  return renderPublicRecognitionPage({
+    title: "Memorials",
+    eyebrow: "Public Remembrance",
+    heading: "Approved memorial tributes",
+    summary: "Memorial content is presented with restrained language, public-safe fields, and explicit approval boundaries before publication.",
+    task: "public.memorials",
+    emptyState: "No memorial tribute records are currently published on the public surface.",
+    entries: []
+  });
+}
+
+function renderContactPage(): string {
+  const allowed = evaluate({
+    role: null,
+    surface: "public",
+    standing: "anonymous",
+    consent: "not_required",
+    task: "public.contact"
+  });
+
+  if (allowed.decision !== "ALLOW") {
+    return renderPublicPage(
+      "Contact unavailable",
+      `<section class="shell" data-route-surface="public"><h1>Contact unavailable</h1><p>The contact surface is temporarily unavailable.</p></section>`,
+      "noindex, follow"
+    );
+  }
+
+  return renderPublicPage(
+    "Contact IWFSA",
+    `<section class="shell shell-single" data-route-surface="public">
+      <div class="shell-content">
+        <div class="eyebrow">Public Contact</div>
+        <h1>Contact IWFSA</h1>
+        <p>Use the public enquiry path for general IWFSA questions. Member records, standing queries, private contact details, and admin decisions remain inside controlled member and admin surfaces.</p>
+        <div class="design-grid">
+          <article class="design-panel">${renderStatusBadges([{ label: "Public enquiry", tone: "public" }])}<h2>General enquiries</h2><p>Public contact guidance is intentionally separate from member support and admin stewardship.</p></article>
+          <article class="design-panel">${renderStatusBadges([{ label: "No private records", tone: "private" }])}<h2>Privacy boundary</h2><p>This page does not expose member emails, phone numbers, standing, attendance, documents, or admin notes.</p></article>
+        </div>
       </div>
     </section>`
   );
@@ -1457,6 +1601,26 @@ export function createWebServer(config: ServiceConfig, dependencies: WebDependen
 
     if (request.method === "GET" && url.pathname === "/public/gallery") {
       sendHtml(response, 200, renderPublicGallery(await fetchPublicProfiles(config, fetchImpl)));
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/public-profiles") {
+      sendHtml(response, 200, renderPublicGallery(await fetchPublicProfiles(config, fetchImpl)));
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/honoraries") {
+      sendHtml(response, 200, renderHonorariesPage());
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/memorials") {
+      sendHtml(response, 200, renderMemorialsPage());
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/contact") {
+      sendHtml(response, 200, renderContactPage());
       return;
     }
 

@@ -313,3 +313,15 @@
 **Test References:** `npm run preview:smoke`, `npm run typecheck`, `npm run test`, `npm run design:smoke`, `npm run ux:check`, Vercel CLI deploy logs, live HTTP route checks.
 
 **Status:** Accepted.
+
+## 2026-05-07 - Reviewer Walkthrough Smoke And Public Route Completion
+
+**Decision:** Add a reviewer walkthrough smoke gate and complete the mapped public review routes `/public-profiles`, `/honoraries`, `/memorials`, and `/contact` as public-safe server-rendered pages.
+
+**Rationale:** The reviewer preview is now reachable, so the next risk is an incomplete guided review path. The Phase 10 checklist expects public homepage, gallery, story, honorary, memorial, member, and admin paths to be testable. These routes are already mapped in `docs/surface-navigation-map.md`, so rendering them closes a review gap without inventing new surfaces.
+
+**Evidence:** `npm run reviewer:smoke` exercises public recognition/contact pages, preview credentials, member dashboard/profile/events/directory/notifications/fallbacks, member RSVP, admin dashboard/members/events/import/public-review/audit pages, admin member creation, admin event creation, surface separation, and primary-action limits through the serverless preview handler.
+
+**Test References:** `npm run reviewer:smoke`, web route tests, `npm run design:smoke`, `npm run preview:smoke`.
+
+**Status:** Accepted.

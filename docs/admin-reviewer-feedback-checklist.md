@@ -18,6 +18,7 @@ Preview URL: `https://iwfsa-platform-v2-reviewer-pilot-lsm79cvgd.vercel.app`
 - Vercel SSO protection is disabled for the reviewer-pilot preview so the URL can be opened by a reviewer without a Vercel login.
 - The preview uses in-memory pilot data and session state. It is suitable for workflow, governance, and visual review, but not for production records.
 - Verified live paths: `/`, `/health`, `/brand.css`, `/api/csrf-token`, `/public/gallery`, member sign-in to `/member/dashboard`, admin sign-in to `/admin`, and member denial from `/admin` back to `/`.
+- Local reviewer walkthrough proof: `npm run reviewer:smoke` covers public recognition/contact pages, preview credentials, member RSVP, admin member creation, admin event creation, surface separation, and primary-action limits.
 
 ## Suggested Admin Walkthrough
 
@@ -47,6 +48,9 @@ Preview URL: `https://iwfsa-platform-v2-reviewer-pilot-lsm79cvgd.vercel.app`
 | `/` | Public mission and brand feel credible for IWFSA. | |
 | `/public/gallery` | Only approved public-safe dummy profile fields are visible. | |
 | `/public/story/1` | Story pages do not expose member-only or admin workflow details. | |
+| `/honoraries` | Honorary recognition appears approval-gated, public-safe, and free of private member details even when no records are published. | |
+| `/memorials` | Memorial framing feels dignified, approval-gated, and does not expose private family/member details even when no records are published. | |
+| `/contact` | Public contact guidance is clear and separate from member support or admin decisions. | |
 
 ## Decision Questions
 

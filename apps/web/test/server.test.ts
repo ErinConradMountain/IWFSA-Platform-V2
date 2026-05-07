@@ -670,6 +670,66 @@ test("public gallery and story render approved projection without private fields
   });
 });
 
+test("mapped public review routes render public-safe recognition and contact pages", async () => {
+  const fetchImpl = async (input: string | URL | Request) => {
+    assert.match(String(input), /\/api\/public\/profiles/);
+    return new Response(JSON.stringify({
+      profiles: [
+        {
+          displayName: "Approved Public Member",
+          biography: "Approved public-safe profile.",
+          updatedAt: "2026-05-07T10:00:00.000Z",
+          internal_id: "private-id"
+        }
+      ]
+    }), {
+      status: 200,
+      headers: { "content-type": "application/json" }
+    });
+  };
+  const server = createWebServer({
+    serviceName: "web",
+    environment: "test",
+    startedAt: "now",
+    host: "127.0.0.1",
+    port: 0,
+    apiBaseUrl: "http://api.test",
+    localDevelopment: true,
+    allowRoleSelfSelection: true,
+    secureCookies: false,
+    sessionTtlMs: 1000,
+    persistenceTarget: "memory"
+  }, { fetchImpl: fetchImpl as typeof fetch });
+
+  await withServer(server, async (baseUrl) => {
+    const home = await (await fetch(`${baseUrl}/`)).text();
+    assert.match(home, /Public review paths/);
+    assert.match(home, /href="\/honoraries"/);
+    assert.match(home, /href="\/memorials"/);
+    assert.match(home, /href="\/contact"/);
+
+    const profiles = await fetch(`${baseUrl}/public-profiles`);
+    const profilesBody = await profiles.text();
+    assert.equal(profiles.status, 200);
+    assert.match(profilesBody, /Approved public stories/);
+    assert.match(profilesBody, /Approved Public Member/);
+    assert.doesNotMatch(profilesBody, /private-id|href="\/admin|href="\/member/);
+
+    for (const [route, marker] of [
+      ["/honoraries", "Approved honorary members"],
+      ["/memorials", "Approved memorial tributes"],
+      ["/contact", "Contact IWFSA"]
+    ]) {
+      const response = await fetch(`${baseUrl}${route}`);
+      const body = await response.text();
+      assert.equal(response.status, 200);
+      assert.match(body, new RegExp(marker));
+      assert.match(body, /data-route-surface="public"/);
+      assert.doesNotMatch(body, /href="\/admin|href="\/member|private-id|contact@example/);
+    }
+  });
+});
+
 test("robots file blocks protected and revoked public paths", async () => {
   const server = createWebServer({
     serviceName: "web",

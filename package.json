@@ -23,6 +23,7 @@
     "agent-workflow:check": "node scripts/agent-workflow-check.mjs",
     "design:smoke": "node --experimental-strip-types scripts/design-route-smoke.mjs",
     "preview:smoke": "node --experimental-strip-types scripts/serverless-preview-smoke.mjs",
+    "reviewer:smoke": "node --experimental-strip-types scripts/reviewer-walkthrough-smoke.mjs",
     "ux:check": "node scripts/ux-brand-check.mjs",
     "phase3:check": "node scripts/phase3-design-check.mjs",
     "phase4:check": "node scripts/phase4-spine-check.mjs",

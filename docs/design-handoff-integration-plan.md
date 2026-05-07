@@ -69,19 +69,35 @@ Prototype status:
 | Audit/CSRF | State-changing admin/member actions use mapped APIs with CSRF and audit evidence. | API and web integration tests. |
 | Mobile/accessibility | No clipping, 44px controls, visible focus, text-labelled status badges, respectful warnings. | Browser E2E visual sweep before release. |
 
+## Design-To-Code Trace
+
+| Review route | Source guidance | Policy task | Production surface | Verification |
+| --- | --- | --- | --- | --- |
+| `/` | Public homepage direction and public-safe route map | `public.home` | `apps/web/src/server.ts` public landing | `npm run reviewer:smoke`, web tests |
+| `/public-profiles` and `/public/gallery` | Public storytelling and approved profile projection guidance | `public.profiles.approved` | `apps/web/src/server.ts` public gallery | `npm run reviewer:smoke`, `npm run preview:smoke`, web tests |
+| `/public/story/{id}` | Public story allowlist and revoked fallback guidance | `public.profiles.approved` | `apps/web/src/server.ts` public story | `npm run reviewer:smoke`, web tests |
+| `/honoraries` | Public recognition route in `docs/surface-navigation-map.md` | `public.honoraries` | `apps/web/src/server.ts` honorary recognition page | `npm run reviewer:smoke`, web tests |
+| `/memorials` | Public remembrance route in `docs/surface-navigation-map.md` | `public.memorials` | `apps/web/src/server.ts` memorial recognition page | `npm run reviewer:smoke`, web tests |
+| `/contact` | Public contact route in `docs/surface-navigation-map.md` | `public.contact` | `apps/web/src/server.ts` public contact page | `npm run reviewer:smoke`, web tests |
+| `/member/dashboard` | `Webpages/member-dashboard-page-sheet.md` | `member.dashboard` | `apps/web/src/server.ts` member dashboard | `npm run design:smoke`, `npm run reviewer:smoke`, web tests |
+| `/member/profile` | `Webpages/member-profile-page-sheet.md` | `member.profile.edit`, `member.profile.visibility` | `apps/web/src/server.ts` profile visibility shell | `npm run design:smoke`, `npm run reviewer:smoke`, web tests |
+| `/member/events` | `Webpages/member-events-page-sheet.md` | `member.events.view`, `member.events.rsvp` | `apps/web/src/server.ts` member events | `npm run reviewer:smoke`, API/web tests |
+| `/member/directory` | `Webpages/member-directory-page-sheet.md` | `member.directory.view` | `apps/web/src/server.ts` member directory | `npm run design:smoke`, `npm run reviewer:smoke`, web tests |
+| `/member/notifications` | `Webpages/member-notifications-page-sheet.md` | `member.notifications.view` | `apps/web/src/server.ts` notifications shell | `npm run design:smoke`, `npm run reviewer:smoke`, notification tests |
+| `/admin` | Admin dashboard and reviewer pilot guidance | `admin.dashboard` | `apps/web/src/server.ts` admin dashboard | `npm run design:smoke`, `npm run reviewer:smoke`, web tests |
+| `/admin/members` | `Webpages/admin-members-page-sheet.md` | `admin.members.manage` | `apps/web/src/server.ts` admin members | `npm run reviewer:smoke`, API/web tests |
+| `/admin/events` | `Webpages/admin-events-page-sheet.md` | `admin.events.manage` | `apps/web/src/server.ts` admin events | `npm run reviewer:smoke`, API/web tests |
+| `/admin/import/preview` | `Webpages/admin-import-preview-page-sheet.md` | `admin.import.preview` | `apps/web/src/server.ts` import preview | `npm run design:smoke`, `npm run reviewer:smoke`, import tests |
+| `/admin/public-review` | `Webpages/admin-public-review-queue-page-sheet.md` | `admin.public-review.queue` | `apps/web/src/server.ts` public review queue | `npm run design:smoke`, `npm run reviewer:smoke`, public approval tests |
+| `/admin/audit` | Admin audit route and audit catalog references | `admin.audit.read` | `apps/web/src/server.ts` audit readiness page | `npm run reviewer:smoke`, audit tests |
+
 ## Immediate Next Build Tasks
 
-1. Add browser E2E coverage for the integrated route shells:
-   - `/member/dashboard`
-   - `/member/profile`
-   - `/member/directory`
-   - `/member/notifications`
-   - `/member/consent-required`
-   - `/member/standing`
-   - `/admin`
-   - `/admin/members`
-   - `/admin/import/preview`
-   - `/admin/public-review`
+1. Add browser E2E coverage for the integrated route shells after the scripted reviewer smoke is stable:
+   - desktop and mobile visual pass for public, member, and admin review paths,
+   - console health,
+   - focus visibility,
+   - no clipping or overlap.
 
 2. Convert the member dashboard shell into typed component helpers:
    - `StatusSummary`
@@ -107,6 +123,8 @@ Prototype status:
 ## Repeatable Local Smoke Check
 
 Use `npm run design:smoke` to start isolated in-memory API and web servers, create member/admin sessions through the normal sign-in route, and verify authenticated design routes without adding a special test-only browser route.
+
+Use `npm run reviewer:smoke` for the broader reviewer walkthrough across public, member, and admin paths. It verifies public-safe recognition/contact routes, real preview credentials, member RSVP, admin member creation, admin event creation, surface-scoped navigation, and primary-action limits through the serverless preview handler.
 
 This helper checks:
 
