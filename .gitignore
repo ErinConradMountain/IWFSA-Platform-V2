@@ -4,6 +4,7 @@ node_modules/
 *.local
 *.log
 coverage/
+test-results/
 build/
 dist/
 temp/

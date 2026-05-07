@@ -33,6 +33,7 @@ This checklist turns operational maturity into release evidence. It must be comp
 - Confirm consent-required and standing-restricted fallbacks do not render protected member content behind the gate.
 - Run `npm run design:smoke` before browser sign-off to verify authenticated design routes, cross-surface link absence, and primary-action counts through local in-memory services.
 - Browser-check desktop and mobile render for the integrated design pages before RC sign-off, including no clipping, 44px controls, visible focus, and status badges with text labels.
+- 2026-05-07 browser QA evidence: local Playwright fallback checked `http://127.0.0.1:3101` across public, member, and admin reviewer paths at 1366x900 and 390x844, with no console errors, no HTTP 4xx/5xx resources, no horizontal overflow, no undersized interactive targets, and successful member RSVP interaction.
 
 ## RC Packaging
 

@@ -455,7 +455,8 @@ form { margin-top: 1.2rem; }
 .story-card { min-width: 0; border: 1px solid color-mix(in srgb, var(--iwfsa-primary) 14%, transparent); border-radius: 0.5rem; overflow: hidden; background: var(--iwfsa-background); }
 .story-card img, .story-portrait { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: var(--iwfsa-surface); }
 .story-card-content { padding: 1rem; }
-.story-card a { color: var(--iwfsa-primary); font-weight: 800; }
+.story-card a { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; margin-top: 0.35rem; padding: 0.55rem 0.85rem; border-radius: 999px; color: var(--iwfsa-primary); font-weight: 800; text-decoration: none; background: color-mix(in srgb, var(--iwfsa-public) 10%, var(--iwfsa-background)); border: 1px solid color-mix(in srgb, var(--iwfsa-public) 28%, transparent); }
+.story-card a:hover, .story-card a:focus-visible { background: color-mix(in srgb, var(--iwfsa-public) 16%, var(--iwfsa-background)); }
 .skip-link { position: absolute; top: -3rem; left: 1rem; padding: 0.6rem 0.85rem; border-radius: 999px; background: var(--iwfsa-home-ink); color: var(--iwfsa-background); text-decoration: none; z-index: 100; }
 .skip-link:focus-visible { top: 1rem; }
 .site-header { position: sticky; top: 0; z-index: 30; padding: 0.75rem 0 0.65rem; backdrop-filter: blur(20px); background: color-mix(in srgb, var(--iwfsa-home-panel-warm) 90%, transparent); border-bottom: 1px solid color-mix(in srgb, var(--iwfsa-home-ink) 8%, transparent); box-shadow: 0 0.75rem 1.5rem color-mix(in srgb, var(--iwfsa-home-ink) 5%, transparent); }
@@ -666,6 +667,7 @@ function renderSiteChrome(input: { title: string; body: string; surface: NavSurf
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     ${input.robots ? `<meta name="robots" content="${escapeHtml(input.robots)}" />` : ""}
     <title>${escapeHtml(input.title)}</title>
+    <link rel="icon" href="/legacy-assets/iwfsa-logo.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/brand.css?v=${BRAND_CSS_VERSION}" />
   </head>
   <body${input.pageClass ? ` class="${escapeHtml(input.pageClass)}"` : ""}>
@@ -1550,6 +1552,14 @@ export function createWebServer(config: ServiceConfig, dependencies: WebDependen
         "cache-control": "public, max-age=300"
       });
       response.end("User-agent: *\nDisallow: /admin/\nDisallow: /member/\nDisallow: /public/story/revoked\n");
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/favicon.ico") {
+      response.writeHead(204, {
+        "cache-control": "public, max-age=3600"
+      });
+      response.end();
       return;
     }
 

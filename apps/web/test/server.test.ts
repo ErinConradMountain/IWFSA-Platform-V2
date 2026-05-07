@@ -754,6 +754,29 @@ test("robots file blocks protected and revoked public paths", async () => {
   });
 });
 
+test("favicon request is handled without noisy browser 404s", async () => {
+  const server = createWebServer({
+    serviceName: "web",
+    environment: "test",
+    startedAt: "now",
+    host: "127.0.0.1",
+    port: 0,
+    localDevelopment: true,
+    allowRoleSelfSelection: true,
+    secureCookies: false,
+    sessionTtlMs: 1000,
+    persistenceTarget: "memory"
+  });
+
+  await withServer(server, async (baseUrl) => {
+    const home = await (await fetch(`${baseUrl}/`)).text();
+    assert.match(home, /rel="icon"/);
+
+    const response = await fetch(`${baseUrl}/favicon.ico`);
+    assert.equal(response.status, 204);
+  });
+});
+
 test("member session cannot access admin surface", async () => {
   await withApiAndWeb(async (baseUrl) => {
     const signInResponse = await fetch(`${baseUrl}/signin`, {

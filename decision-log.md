@@ -325,3 +325,15 @@
 **Test References:** `npm run reviewer:smoke`, web route tests, `npm run design:smoke`, `npm run preview:smoke`.
 
 **Status:** Accepted.
+
+## 2026-05-07 - Browser QA Polish For Reviewer Pilot
+
+**Decision:** Add explicit favicon handling and improve public story links as 44px touch targets after rendered browser QA.
+
+**Rationale:** Scripted smoke coverage passed, but the reviewer deadline requires a credible browser experience. The fallback Playwright pass checked desktop and mobile public, member, and admin surfaces and found one noisy missing-resource console error plus small text-style public story links. Handling `/favicon.ico` and styling story links as touch targets removes these review distractions without changing route scope or business logic.
+
+**Evidence:** Local browser QA on `http://127.0.0.1:3101` covered public homepage, gallery, honorary, memorial, contact, sign-in, member dashboard, member events with RSVP, mobile member profile, admin dashboard, admin members, mobile public review, and mobile audit. The final pass reported no console errors, no HTTP 4xx/5xx resources, no horizontal overflow, no undersized interactive targets, and no excess primary actions.
+
+**Test References:** `npm run test`, `npm run ux:check`, `npm run reviewer:smoke`, local Playwright fallback browser QA.
+
+**Status:** Accepted.

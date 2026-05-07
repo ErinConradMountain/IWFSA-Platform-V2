@@ -19,6 +19,7 @@ Preview URL: `https://iwfsa-platform-v2-reviewer-pilot-lsm79cvgd.vercel.app`
 - The preview uses in-memory pilot data and session state. It is suitable for workflow, governance, and visual review, but not for production records.
 - Verified live paths: `/`, `/health`, `/brand.css`, `/api/csrf-token`, `/public/gallery`, member sign-in to `/member/dashboard`, admin sign-in to `/admin`, and member denial from `/admin` back to `/`.
 - Local reviewer walkthrough proof: `npm run reviewer:smoke` covers public recognition/contact pages, preview credentials, member RSVP, admin member creation, admin event creation, surface separation, and primary-action limits.
+- Rendered browser proof: local Playwright fallback checked the public, member, and admin reviewer paths at desktop and mobile sizes with no console errors, no missing resource responses, no horizontal overflow, no undersized interactive targets, and a successful RSVP interaction.
 
 ## Suggested Admin Walkthrough
 
