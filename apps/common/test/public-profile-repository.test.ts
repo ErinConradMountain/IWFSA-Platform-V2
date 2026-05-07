@@ -31,7 +31,7 @@ test("approved public profile query projects only public-safe fields", () => {
 test("public profile repository executes guarded query with a limit", () => {
   const calls: Array<{ sql: string; params: unknown[] }> = [];
   const repository = createPublicProfileRepository({
-    query(sql, params) {
+    query<T>(sql: string, params: unknown[]) {
       calls.push({ sql, params });
       return {
         rows: [
@@ -40,7 +40,7 @@ test("public profile repository executes guarded query with a limit", () => {
             biography: "Public-safe biography.",
             updatedAt: "2026-05-03T00:00:00.000Z"
           }
-        ]
+        ] as T[]
       };
     }
   });

@@ -140,14 +140,14 @@ runPublicApprovalRepositoryContract("PostgreSQL adapter contract client", () => 
         });
       }
     },
-    query(sql, params) {
+    query<T>(sql: string, params: unknown[]) {
       if (sql.includes("where id = $1")) {
         const row = records.get(String(params[0]));
-        return { rows: row ? [toSqlRow(row)] : [] };
+        return { rows: (row ? [toSqlRow(row)] : []) as T[] };
       }
 
       return {
-        rows: [...records.values()].filter((record) => record.status === "pending_review").map(toSqlRow)
+        rows: [...records.values()].filter((record) => record.status === "pending_review").map(toSqlRow) as T[]
       };
     }
   });

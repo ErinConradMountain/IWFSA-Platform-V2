@@ -6,10 +6,18 @@ Use this checklist for the first administrator review of the IWFSA Platform V2 p
 
 ## Preview Credentials
 
+Preview URL: `https://iwfsa-platform-v2-reviewer-pilot-lsm79cvgd.vercel.app`
+
 | Role | Username | Password | Starting route |
 | --- | --- | --- | --- |
 | Admin | `akeida` | `1possibility` | `/admin` |
 | Member | `naledi.k` | `1possibility` | `/member/dashboard` |
+
+## Access Verification
+
+- Vercel SSO protection is disabled for the reviewer-pilot preview so the URL can be opened by a reviewer without a Vercel login.
+- The preview uses in-memory pilot data and session state. It is suitable for workflow, governance, and visual review, but not for production records.
+- Verified live paths: `/`, `/health`, `/brand.css`, `/api/csrf-token`, `/public/gallery`, member sign-in to `/member/dashboard`, admin sign-in to `/admin`, and member denial from `/admin` back to `/`.
 
 ## Suggested Admin Walkthrough
 

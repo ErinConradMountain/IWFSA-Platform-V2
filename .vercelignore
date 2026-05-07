@@ -1,2 +1,7 @@
-apps/api/package.json
-apps/web/package.json
+# Workspace package manifests must be uploaded so Vercel/npm can resolve the
+# local file dependencies used by the serverless reviewer preview.
+node_modules/
+build/
+dist/
+coverage/
+*.log

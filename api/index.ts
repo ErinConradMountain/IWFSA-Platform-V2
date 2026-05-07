@@ -11,6 +11,11 @@ import { createApiServer } from "../apps/api/src/server.ts";
 import { createWebServer } from "../apps/web/src/server.ts";
 
 type HeaderRecord = Record<string, string | string[] | undefined>;
+type MockIncomingMessage = IncomingMessage & PassThrough;
+type MockServerResponse = ServerResponse & EventEmitter & {
+  headers: Record<string, string | string[] | number>;
+  chunks: Buffer[];
+};
 
 function previewConfig(serviceName: string, defaultPort: number): ServiceConfig {
   return {
@@ -37,11 +42,8 @@ function responseHeaders(input: Record<string, string | string[] | number>): Rec
 
 function dispatch(server: http.Server, url: URL, init: RequestInit = {}): Promise<Response> {
   return new Promise((resolve, reject) => {
-    const request = new PassThrough() as IncomingMessage;
-    const response = new EventEmitter() as ServerResponse & {
-      headers: Record<string, string | string[] | number>;
-      chunks: Buffer[];
-    };
+    const request = new PassThrough() as MockIncomingMessage;
+    const response = new EventEmitter() as MockServerResponse;
 
     const body = typeof init.body === "string" || Buffer.isBuffer(init.body) ? init.body : "";
     const headers = normalizeHeaders(new Headers(init.headers));
@@ -66,16 +68,16 @@ function dispatch(server: http.Server, url: URL, init: RequestInit = {}): Promis
         }
       }
       return response;
-    }) as ServerResponse["writeHead"];
+    }) as MockServerResponse["writeHead"];
     response.setHeader = ((key: string, value: string | string[] | number) => {
       response.headers[key.toLowerCase()] = value;
       return response;
-    }) as ServerResponse["setHeader"];
-    response.getHeader = ((key: string) => response.headers[key.toLowerCase()]) as ServerResponse["getHeader"];
+    }) as MockServerResponse["setHeader"];
+    response.getHeader = ((key: string) => response.headers[key.toLowerCase()]) as MockServerResponse["getHeader"];
     response.write = ((chunk: string | Buffer) => {
       response.chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
       return true;
-    }) as ServerResponse["write"];
+    }) as MockServerResponse["write"];
     response.end = ((chunk?: string | Buffer) => {
       if (chunk) {
         response.chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
@@ -86,7 +88,7 @@ function dispatch(server: http.Server, url: URL, init: RequestInit = {}): Promis
         headers: responseHeaders(response.headers)
       }));
       return response;
-    }) as ServerResponse["end"];
+    }) as MockServerResponse["end"];
 
     request.on("error", reject);
     server.emit("request", request, response);

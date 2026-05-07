@@ -11,6 +11,7 @@ const steps = [
   ["node", ["scripts/docs-control-check.mjs"]],
   ["node", ["scripts/agent-workflow-check.mjs"]],
   ["node", ["--experimental-strip-types", "scripts/design-route-smoke.mjs"]],
+  ["node", ["--experimental-strip-types", "scripts/serverless-preview-smoke.mjs"]],
   ["node", ["scripts/ux-brand-check.mjs"]],
   ["node", ["scripts/phase3-design-check.mjs"]],
   ["node", ["scripts/phase4-spine-check.mjs"]],

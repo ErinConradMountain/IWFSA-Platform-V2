@@ -1616,8 +1616,7 @@ export function createWebServer(config: ServiceConfig, dependencies: WebDependen
     }
 
     if (url.pathname === "/member/notifications") {
-      const task = url.pathname === "/member/directory" ? "member.directory.view" : "member.notifications.view";
-      const allowed = routeAllowed(authContext, "member", task);
+      const allowed = routeAllowed(authContext, "member", "member.notifications.view");
       if (!allowed.allowed) {
         sendRedirect(response, allowed.fallback);
         return;

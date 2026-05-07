@@ -3,11 +3,14 @@
   "installCommand": "node scripts/link-workspaces.mjs",
   "builds": [
     {
-      "src": "api/index.ts",
+      "src": "api/index.mjs",
       "use": "@vercel/node",
       "config": {
         "includeFiles": [
+          "api/index.ts",
           "node_modules/@iwfsa/**",
+          "apps/api/src/**",
+          "apps/web/src/**",
           "apps/common/src/**",
           "apps/web/public/legacy-assets/**"
         ]
@@ -17,7 +20,7 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "/api/index.ts"
+      "dest": "/api/index.mjs"
     }
   ]
 }

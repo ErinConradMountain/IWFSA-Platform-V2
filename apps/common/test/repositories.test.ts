@@ -4,6 +4,10 @@ import assert from "node:assert/strict";
 import { buildAuditEvent } from "@iwfsa/common/audit";
 import { createInMemoryRepositories, createPostgreSqlRepositories, type PlatformRepositories, type SqlClient } from "@iwfsa/common/repositories";
 
+function sqlRows<T>(rows: unknown[]): { rows: T[] } {
+  return { rows: rows as T[] };
+}
+
 function createMemorySqlClient(): SqlClient {
   const tables = {
     memberAccount: new Map<string, any>(),
@@ -15,7 +19,7 @@ function createMemorySqlClient(): SqlClient {
   };
 
   return {
-    execute(sql, params) {
+    execute(sql: string, params: any[]) {
       if (sql.includes("member_account")) {
         tables.memberAccount.set(params[0], { id: params[0], emailHash: params[1], authState: params[2], createdAt: params[3], updatedAt: params[4] });
       } else if (sql.includes("member_profile")) {
@@ -35,36 +39,36 @@ function createMemorySqlClient(): SqlClient {
         tables.auditEvent.push({ action: params[0], actor: params[1], targetType: params[2], targetId: params[3], timestamp: params[4], correlationId: params[5], redactedMetadata: JSON.parse(String(params[6])), metadataHash: params[7] });
       }
     },
-    query(sql, params) {
+    query<T>(sql: string, params: any[]) {
       if (sql.includes("member_account")) {
-        return { rows: [tables.memberAccount.get(params[0])].filter(Boolean) };
+        return sqlRows<T>([tables.memberAccount.get(params[0])].filter(Boolean));
       }
       if (sql.includes("member_profile")) {
-        return { rows: [tables.memberProfile.get(params[0])].filter(Boolean) };
+        return sqlRows<T>([tables.memberProfile.get(params[0])].filter(Boolean));
       }
       if (sql.includes("membership_status")) {
-        return { rows: tables.membershipStatus.filter((row) => row.memberId === params[0]).slice(-1) };
+        return sqlRows<T>(tables.membershipStatus.filter((row) => row.memberId === params[0]).slice(-1));
       }
       if (sql.includes("activation_token") && sql.includes("update")) {
         const current = tables.activationToken.get(params[1]);
         if (!current || current.usedAt) {
-          return { rows: [] };
+          return sqlRows<T>([]);
         }
         const consumed = { ...current, usedAt: params[0] };
         tables.activationToken.set(params[1], consumed);
-        return { rows: [consumed] };
+        return sqlRows<T>([consumed]);
       }
       if (sql.includes("import_batch") && sql.includes("update")) {
         const current = tables.importBatch.get(params[1]);
-        return { rows: current ? [{ ...current, state: "committed", committedAt: params[0] }] : [] };
+        return sqlRows<T>(current ? [{ ...current, state: "committed", committedAt: params[0] }] : []);
       }
       if (sql.includes("import_batch")) {
-        return { rows: [tables.importBatch.get(params[0])].filter(Boolean) };
+        return sqlRows<T>([tables.importBatch.get(params[0])].filter(Boolean));
       }
       if (sql.includes("audit_event")) {
-        return { rows: tables.auditEvent };
+        return sqlRows<T>(tables.auditEvent);
       }
-      return { rows: [] };
+      return sqlRows<T>([]);
     },
     transaction(work) {
       return work();

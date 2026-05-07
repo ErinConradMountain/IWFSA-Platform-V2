@@ -301,3 +301,15 @@
 **Test References:** Vercel CLI deploy logs, `vercel project protection`, public tunnel HTTP session checks.
 
 **Status:** Accepted.
+
+## 2026-05-07 - Public Vercel Reviewer Preview Runtime
+
+**Decision:** Move the reviewer pilot from temporary tunnel dependence to a public Vercel preview at `https://iwfsa-platform-v2-reviewer-pilot-lsm79cvgd.vercel.app`, disable Vercel SSO protection for that reviewer-pilot project, and package the serverless preview entrypoint with the API, web, common source, and legacy asset files it imports at runtime.
+
+**Rationale:** The prior Vercel preview could build scaffolding but failed review readiness because the deployment was SSO-protected and the serverless function package omitted local TypeScript modules. A public, verified Vercel preview gives reviewers a durable URL while preserving the in-memory pilot boundary and existing public/member/admin policy separation.
+
+**Evidence:** Remote Vercel deployment `dpl_25pEzMaA5usikaqHjjCfdQgmRmgv` reached `READY`; live checks returned `200` for `/`, `/health`, `/brand.css`, `/api/csrf-token`, and `/public/gallery`; member sign-in returned `303` to `/member/dashboard`; admin sign-in returned `303` to `/admin`; a member session requesting `/admin` returned `303` to `/`.
+
+**Test References:** `npm run preview:smoke`, `npm run typecheck`, `npm run test`, `npm run design:smoke`, `npm run ux:check`, Vercel CLI deploy logs, live HTTP route checks.
+
+**Status:** Accepted.

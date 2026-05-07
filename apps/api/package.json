@@ -7,7 +7,7 @@
     "./server": "./src/server.ts"
   },
   "dependencies": {
-    "@iwfsa/common": "workspace:*"
+    "@iwfsa/common": "file:../common"
   },
   "devDependencies": {}
 }

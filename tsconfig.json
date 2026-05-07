@@ -6,11 +6,12 @@
     "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
+    "allowImportingTsExtensions": true,
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
       "@iwfsa/common/*": ["apps/common/src/*"]
     }
   },
-  "include": ["apps/**/*.ts", "scripts/**/*.mjs"]
+  "include": ["api/**/*.ts", "apps/**/*.ts", "scripts/**/*.mjs"]
 }

@@ -31,8 +31,8 @@ async function withApiAndWeb(callback: (baseUrl: string) => Promise<void>): Prom
         isAuthenticated: Boolean(session),
         role: session?.role || null,
         subject: session?.subject || null,
-        standing: session ? "active" : "anonymous",
-        consent: session?.consent || "not_required",
+        standing: session ? "active" as const : "anonymous" as const,
+        consent: session?.consent || "not_required" as const,
         nextRoute: session?.role === "member" ? "/member/dashboard" : session ? "/admin" : null
       };
     },
